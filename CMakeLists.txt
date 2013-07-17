@@ -1,0 +1,77 @@
+cmake_minimum_required(VERSION 2.6)
+
+project(op-space-control)
+
+set(LIBRARY_INSTALL_PATH ${CMAKE_INSTALL_PREFIX}/lib)
+set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
+set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
+
+#Default mode is Release
+IF(NOT CMAKE_BUILD_TYPE)
+  SET(CMAKE_BUILD_TYPE Release CACHE STRING
+      "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel."
+      FORCE)
+ENDIF(NOT CMAKE_BUILD_TYPE)
+
+# ---------------------------------
+# ---------------------------------
+# ---------------------------------
+
+include_directories( ${PROJECT_SOURCE_DIR}/libraries/KrisLibrary )
+
+# Check if the user is set up to parse URDFs
+find_package( urdfdom QUIET )
+if( urdfdom_FOUND )
+   message(STATUS "Found urdfdom -- We will compile a URDF parser")
+
+   include_directories( ${urdfdom_INCLUDE_DIRS} )
+   link_libraries( ${urdfdom_LIBRARIES} )
+
+   find_package( urdfdom_headers REQUIRED )
+   include_directories( ${urdfdom_headers_INCLUDE_DIRS} )
+
+   find_package( Boost REQUIRED COMPONENTS system filesystem thread )
+   include_directories( ${BOOST_INCLUDE_DIRS} )
+   link_libraries( ${BOOST_LIBRARIES} )
+
+else( urdfdom_FOUND )
+   message(STATUS "Could NOT find urdfdom -- We will NOT compile a URDF parser")
+endif( urdfdom_FOUND )
+
+# ---------------------------------
+# ---------------------------------
+# ---------------------------------
+    
+file( GLOB lib_source "src/*.cpp" "src/*.h" )   
+list( SORT lib_source )
+
+# Define target
+add_library( ${PROJECT_NAME} SHARED ${lib_source} )
+
+file( GLOB unit_tests_source "test/*.cpp" )
+list( SORT unit_tests_source )
+
+include_directories( src )
+add_executable( test ${unit_tests_source} )
+target_link_libraries( test ${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/libraries/KrisLibrary/lib/libKrisLibrary.a )
+
+#enable_testing()
+#message(STATUS "\n-- UNIT TEST: ")
+#add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND})
+#foreach(utest_src_file ${unit_tests_source})
+#    get_filename_component(test_base ${utest_src_file} NAME_WE)
+#    message(STATUS "Adding test ${test_base}")
+#    add_executable(${test_base} ${utest_src_file})
+#    target_link_libraries(${test_base} ${PROJECT_NAME})
+#    add_test(${test_base} ${EXECUTABLE_OUTPUT_PATH}/${test_base})
+#    add_custom_target(${test_base}.run ${test_base} ${ARGN})
+#    add_dependencies(check ${test_base})
+#endforeach(utest_src_file)
+
+#install(FILES   include/Robot.h
+#                include/Frame.h
+#                include/Linkage.h
+#                include/urdf_parsing.h
+#        DESTINATION ${CMAKE_INSTALL_PREFIX}/include/RobotKin)
+
+#install(TARGETS ${PROJECT_NAME} DESTINATION ${LIBRARY_INSTALL_PATH})
