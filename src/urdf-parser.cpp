@@ -260,8 +260,6 @@ void URDFConverter::QuatToRotationMat(const Vector4& aa, Matrix3& mat)
     mat(2,2) = 1 - 2*x*x - 2*y*y;
 }
 
-
-
 Math3D::Matrix3 URDFConverter::convertInertial(urdf::Inertial& I)
 {
     Math3D::Matrix3 m;
@@ -366,9 +364,7 @@ bool Robot::load_urdf( std::string filename )
     this->parents.resize(links_size);
     this->linkNames.resize(links_size);
     //this->geometry.resize(links_size); // TODO
-    cout << "Try to resize" << endl;
-    this->q.resize(links_size);
-    cout << "Set To Zero" << endl;
+    this->q.resize(links_size); // Weird error segfault
     this->q.setZero();
     this->qMin.resize(links_size);
     this->qMax.resize(links_size);
@@ -398,8 +394,6 @@ bool Robot::load_urdf( std::string filename )
         this->torqueMax[i] = 0;
         this->powerMax[i] = Inf;
     }
-
-    cout << "init joints" << endl;
 
     for (int i = 0; i < 3; i++)
         this->links[i].type = RobotLink3D::Prismatic;
@@ -432,7 +426,7 @@ bool Robot::load_urdf( std::string filename )
         return false;
     }
 
-    cout << "start converting URDF" << endl;
+    // -------------------------------
 
     URDFLinkNode rootLinkNode(root_link, 0, -1);
     std::vector<URDFLinkNode> linkNodes;
@@ -444,8 +438,6 @@ bool Robot::load_urdf( std::string filename )
         boost::shared_ptr<urdf::Joint> joint = it->second;
         urdfJoints.push_back(joint);
     }
-
-    // -------------------------------
 
     URDFConverter::setJointforNodes(urdfJoints, linkNodes);
     URDFConverter::processTParentTransformations(linkNodes);
