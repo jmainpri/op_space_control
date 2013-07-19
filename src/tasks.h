@@ -13,6 +13,8 @@ weight, and task name.
 If the task space is non-cartesian, the taskDifference method should
 be overridden.
 */
+namespace op_space_control
+{
 class OperationalSpaceTask
 {
 public:
@@ -83,7 +85,7 @@ public:
 
     //! Gets Jacobian dx/dq(q)
     //! Subclasses MUST override this.
-    virtual Vector GetJacobian( Config q ) = 0;
+    virtual Matrix GetJacobian( Config q ) = 0;
 
     //! Returns x(q)-xdes where - is the task-space differencing operator
     Vector GetSensedError( Config q );
@@ -112,9 +114,9 @@ protected:
 };
 
 //! Center of Mass position task subclass
-class COMTask : public Task
+class COMTask : public OperationalSpaceTask
 {
-    COMTask( RobotKin& robot, int baseLinkNo = -1 );
+    COMTask( RobotDynamics3D& robot, int baseLinkNo = -1 );
 
     double GetMass();
 
@@ -122,7 +124,7 @@ class COMTask : public Task
     Vector GetSensedValue( Config q );
 
     //! Returns axis-weighted CoM Jacobian by averaging
-    Vector GetJacobian( Config q );
+    Matrix GetJacobian( Config q );
 
     void DrawGL( Config q );
 
@@ -135,12 +137,12 @@ private:
 
 //! Link position/orientation task subclass.
 //! Supports both absolute and relative positioning.
-class LinkTask : public Task
+class LinkTask : public OperationalSpaceTask
 {
-    LinkTask();
+    LinkTask( RobotDynamics3D& robot, int linkNo, std::string taskType, int baseLinkNo = -1  );
     Vector GetSensedValue( Config q );
     Vector TaskDifference( Vector a, Vector b);
-    Vector GetJacobian( Config q );
+    Matrix GetJacobian( Config q );
     Vector DrawGL( Vector q );
 
 private:
@@ -148,21 +150,21 @@ private:
     int _linkNo;
     int _baseLinkNo;
     RobotDynamics3D& _robot;
-//    self.hP = -1
-//    self.hD = 0
-//    self.hI = 0
-    Vector _localPosition;
+    //    self.hP = -1
+    //    self.hD = 0
+    //    self.hI = 0
+    Vector3 _localPosition;
     std::string _taskType;
-    std::string _name = "Link";
+    std::string _name;
 };
 
 //! A joint angle task class
-class JointTask : public Task
+class JointTask : public OperationalSpaceTask
 {
     JointTask( RobotDynamics3D& robot, const std::vector<int>& jointIndices );
 
     Vector GetSensedValue( Config q );
-    Vector GetJacobian( Config q );
+    Matrix GetJacobian( Config q );
 
 private:
     RobotDynamics3D& _robot;
@@ -174,14 +176,14 @@ private:
 //! Activates joint limit constraint, i.e., add a joint task
 //! to avoid reaching limit, when surpassing a threshold.
 //! Or, increase weight on this joint task as joint gets closer to its limit
-class JointLimitTask : public Task
+class JointLimitTask : public OperationalSpaceTask
 {
     JointLimitTask();
 
     void UpdateState( Config q, Vector dq, double dt );
 
     Vector GetSensedValue( Config q );
-    Vector GetJacobian( Config q );
+    Matrix GetJacobian( Config q );
 
 private:
     RobotDynamics3D& _robot;
@@ -197,5 +199,6 @@ private:
     Vector _dxdes;
     std::string _name;
 };
+}
 
 #endif // OPERATIONALSPACETASKS_H
