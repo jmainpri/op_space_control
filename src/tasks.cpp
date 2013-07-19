@@ -1,6 +1,8 @@
 #include "tasks.h"
 
 using namespace op_space_control;
+using std::cout;
+using std::endl;
 
 OperationalSpaceTask::OperationalSpaceTask()
 {
@@ -320,15 +322,15 @@ void COMTask::DrawGL(Config q)
         xdes = Tb * xdes;
         x = Tb * x;
     }
-// Link to OpenGL
-//    glPointSize(10);
-//    glEnable(GL_POINT_SMOOTH);
-//    glBegin(GL_POINTS);
-//    glColor3f(0,1,0);	//green
-//    glVertex3fv(xdes);
-//    glColor3f(0,1,1);	//cyan
-//    glVertex3fv(x);
-//    glEnd();
+    // Link to OpenGL
+    //    glPointSize(10);
+    //    glEnable(GL_POINT_SMOOTH);
+    //    glBegin(GL_POINTS);
+    //    glColor3f(0,1,0);	//green
+    //    glVertex3fv(xdes);
+    //    glColor3f(0,1,1);	//cyan
+    //    glVertex3fv(x);
+    //    glEnd();
 }
 
 //--------------------------------------------------------------------
@@ -489,31 +491,36 @@ Matrix LinkTask::GetJacobian( Config q )
 Vector LinkTask::DrawGL(Vector q)
 {
     Vector x_buff = GetSensedValue(q);
-    Vector xdes = _xdes;
 
-//    glPointSize(6);
-//    glEnable(GL_POINT_SMOOTH);
-//    glBegin(GL_POINTS);
+    //    glPointSize(6);
+    //    glEnable(GL_POINT_SMOOTH);
+    //    glBegin(GL_POINTS);
 
-    Frame3D Tb = _robot.links[_baseLinkNo].T_World;
+    const Frame3D& Tb = _robot.links[_baseLinkNo].T_World;
 
     if( _taskType == "position" )
     {
-        Vector3 x; PopPosFromVector( x_buff, x);
+        Vector3 x;
+        Vector3 xdes;
+        PopPosFromVector(  x_buff, x );
+        PopPosFromVector(  _xdes, xdes );
         if ( _baseLinkNo >= 0 )
         {
             x = Tb * x;
             xdes = Tb * xdes;
         }
 
-//        glColor3f(1,0,0);	//red
-//        glVertex3fv(xdes);
-//        glColor3f(1,0.5,0);	//orange
-//        glVertex3fv(x);
+        //        glColor3f(1,0,0);	//red
+        //        glVertex3fv(xdes);
+        //        glColor3f(1,0.5,0);	//orange
+        //        glVertex3fv(x);
     }
     else if( _taskType == "po" )
     {
-        Frame3D x; PopFrameFromVector( x_buff, x );
+        Frame3D x;
+        Frame3D xdes;
+        PopFrameFromVector( x_buff, x );
+        PopFrameFromVector( _xdes, xdes );
 
         if ( _baseLinkNo >= 0 )
         {
@@ -521,11 +528,11 @@ Vector LinkTask::DrawGL(Vector q)
             xdes = Tb * xdes;
         }
 
-//        glColor3f(1,0,0);	//red
-//        glVertex3fv(xdes[1]);
-//        glColor3f(1,0.5,0);	//orange
-//        glVertex3fv(x[1]);
-//        glEnd();
+        //        glColor3f(1,0,0);	//red
+        //        glVertex3fv(xdes[1]);
+        //        glColor3f(1,0.5,0);	//orange
+        //        glVertex3fv(x[1]);
+        //        glEnd();
     }
 }
 
@@ -534,9 +541,8 @@ Vector LinkTask::DrawGL(Vector q)
 //--------------------------------------------------------------------
 //--------------------------------------------------------------------
 
-JointTask::JointTask( RobotDynamics3D& robot, const std::vector<int>& jointIndices ) : OperationalSpaceTask()
+JointTask::JointTask( RobotDynamics3D& robot, const std::vector<int>& jointIndices ) : OperationalSpaceTask() , _robot(robot)
 {
-    _robot = robot;
     _jointIndices = jointIndices;
     _name = "Joint";
     // pass
@@ -552,14 +558,17 @@ Vector JointTask::GetSensedValue( Config q )
     return x;
 }
 
-Vector JointTask::GetJacobian( Config q )
+Matrix JointTask::GetJacobian( Config q )
 {
-    Matrix x( _jointIndices.size(), q.size() );
-    for(int i=0;i<(_jointIndices.size());i++)
+    Matrix J(  _jointIndices.size(), q.size()  );
+
+    Vector row;
+    for(int i=0;i<int(_jointIndices.size());i++)
     {
         Vector Ji( _robot.links.size(), 0.0 );
         Ji( _jointIndices[i] ) = 1;
-        J.setRow( Ji ); // TODO check row or collumn
+        J.getRowRef( i, row );
+        row = Ji; // TODO check that it's rows or coll ??
     }
     return J;
 }
@@ -569,18 +578,16 @@ Vector JointTask::GetJacobian( Config q )
 //--------------------------------------------------------------------
 //--------------------------------------------------------------------
 
-JointLimitTask::JointLimitTask() : Task()
+JointLimitTask::JointLimitTask( RobotDynamics3D& robot ) : OperationalSpaceTask() , _robot(robot)
 {
-    //    def __init__(self,robot):
-    //        Task.__init__(self)
-    _robot = robot;
     _buffersize = 2.0;
-    _qmin,_qmax = robot.getJointLimits();
-    _accelMax = robot.getAccelerationLimits();
+    _qMin =  robot.qMin;
+    _qMax = robot.qMax;
+    _aMax = Vector( robot.q.n, 0.0 ); // TODO get accelerations, see if urdf adds Acc
     _wscale = 0.1;
     _maxw = 10;
     _active.clear();
-    _weight = 0;
+    _weight.clear();
     _name = "Joint limits";
     SetGains(-0.1,-2.0,0);
 }
@@ -595,15 +602,19 @@ Vector JointLimitTask::GetSensedValue( Config q )
     return x;
 }
 
-Vector JointLimitTask::GetJacobian( Config q )
+Matrix JointLimitTask::GetJacobian( Config q )
 {
     Matrix J( _active.size(), q.size() );
-    for(int i=0;i<(_active.size());i++)
+
+    Vector row;
+    for(int i=0;i<int(_active.size());i++)
     {
-        Vector Ji( _robot.links.size(), 0.0 );
+        Vector Ji( _robot.q.size(), 0.0 );
         Ji( _active[i] ) = 1;
-        J.setRow( Ji ); // TODO check row or collumn
+        J.getRowRef( i, row );
+        row = Ji; // TODO check that it's rows or coll ??
     }
+
     return J;
 }
 
@@ -618,19 +629,20 @@ void JointLimitTask::UpdateState( Config q, Vector dq, double dt )
     double maxw = _maxw;
 
     int s = q.size(); // Check sizes of array
-    bool size_ok = ( s == dq.size() ) &&  ( s == _qmin.size() ) && ( s == _accelMax.size() );
+    bool size_ok = ( s == dq.size() ) &&  ( s == _qMin.size() ) && ( s == _aMax.size() );
     if( !size_ok )
     {
-        cout << "Error in the joint array size of joint limit taks, line " << __line__ << endl;
+        cout << "Error in the joint array size of joint limit taks, line " << __LINE__ << endl;
+        return;
     }
 
     for( int i=0; i<s; i++ )
     {
         double j = q[i];
         double dj= dq[i];
-        double jmin = _qmin[i];
-        double jmax = _qmax[i];
-        double amax = _accelMax[i];
+        double jmin = _qMin[i];
+        double jmax = _qMax[i];
+        double amax = _aMax[i]; // TODO get accel
 
         if( jmax <= jmin )
             continue;
@@ -642,7 +654,7 @@ void JointLimitTask::UpdateState( Config q, Vector dq, double dt )
 
         if( dj > 0.0 )
         {
-            t = dj / a;
+            double t = dj / a;
             //j + t*dj - t^2*a/2
             jstop = j + t*dj - t*t*a*0.5;
             if( jstop > jmax )
@@ -659,7 +671,7 @@ void JointLimitTask::UpdateState( Config q, Vector dq, double dt )
                 }
                 else
                 {
-                    alim = dj*dj/(jmax-j)*0.5;
+                    double alim = dj*dj/(jmax-j)*0.5;
 
                     if( alim > amax)
                     {
@@ -676,7 +688,7 @@ void JointLimitTask::UpdateState( Config q, Vector dq, double dt )
         }
         else
         {
-            t = -dj / a;
+            double t = -dj / a;
             // + t*dj + t^2*a/2
             jstop = j + t*dj + t*t*a*0.5;
             if( jstop < jmin )
@@ -693,7 +705,7 @@ void JointLimitTask::UpdateState( Config q, Vector dq, double dt )
                 }
                 else
                 {
-                    alim = dj*dj/(j-jmin)*0.5;
+                    double alim = dj*dj/(j-jmin)*0.5;
                     if( alim > amax )
                     {
                         ades = amax;
@@ -713,9 +725,13 @@ void JointLimitTask::UpdateState( Config q, Vector dq, double dt )
             w = maxw;
 
         _active.push_back(i);
-        _xdes.push_back(max(jmin,min(jmax,j)));
-        _dxdes.push_back(dj+dt*ades);
         _weight.push_back(w);
+
+        _xdes.resizePersist(_xdes.size()+1); // TODO ask kris for push_back function
+        _xdes[_xdes.size()-1] = std::max(jmin,std::min(jmax,j));
+
+        _dxdes.resizePersist(_dxdes.size()+1);
+        _dxdes[_dxdes.size()-1] = dj+dt*ades;
     }
 
     if( _weight.empty() )

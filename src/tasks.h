@@ -178,7 +178,7 @@ private:
 //! Or, increase weight on this joint task as joint gets closer to its limit
 class JointLimitTask : public OperationalSpaceTask
 {
-    JointLimitTask();
+    JointLimitTask(  RobotDynamics3D& robot );
 
     void UpdateState( Config q, Vector dq, double dt );
 
@@ -188,13 +188,13 @@ class JointLimitTask : public OperationalSpaceTask
 private:
     RobotDynamics3D& _robot;
     double _buffersize;
-    Vector _qmin;
-    Vector _qmax;
-    Vector _accelMax;
+    Vector _qMin;
+    Vector _qMax;
+    Vector _aMax;
     double _wscale;
     double _maxw;
     std::vector<int> _active;
-    double _weight;
+    std::vector<double> _weight;
     Vector _xdes;
     Vector _dxdes;
     std::string _name;
