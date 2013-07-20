@@ -8,7 +8,8 @@ OperationalSpaceTask::OperationalSpaceTask()
 {
     // TODO should be virtual
     _level = 1;
-    _weight = 1;
+    _weight.resize(1); _weight[0] = 1;
+    //_weight.push_back(1); // Ask Kris to implement it
     _name = "unnamed";
     _hP;
     _hD;
@@ -51,7 +52,7 @@ Vector OperationalSpaceTask::GetCommandVelocity( Vector q, Vector dq, double dt)
 
 void OperationalSpaceTask::Advance( Vector q, Vector dq, double dt )
 {
-    if ( _weight > 0 )
+    if( _weight.size() > 0 )
     {
         Vector eP = GetSensedError( q );
 

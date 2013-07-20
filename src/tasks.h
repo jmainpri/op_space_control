@@ -46,18 +46,28 @@ public:
         _hI = hI;
     }
 
+    //! User calls this to get priority level. A smaller value means more important
+    double GetPriority() { return _level; }
+
     //! User calls this to set priority level. A smaller value means more important
     void SetPriority( int level=1 )
     {
         _level = level;
     }
 
+    //! User calls this to get task weight to differentiate from others on the same
+    //! priority level. A larger weight means more important.
+    Vector GetWeight() { return _weight; }
+
     //! User calls this to set task weight to differentiate from others on the same
     //! priority level. A larger weight means more important.
-    void SetWeight( int weight )
+    void SetWeight( Vector weight )
     {
         _weight = weight;
     }
+
+    //! Task name can be used to retrieve a task in an OperationalSpaceController instance
+    std::string GetName() { return _name; }
 
     //! Task name can be used to retrieve a task in an OperationalSpaceController instance
     void SetName( std::string name )
@@ -102,7 +112,7 @@ public:
 
 protected:
     int _level;
-    int _weight;
+    Vector _weight;
     std::string _name;
     double _hP;
     double _hD;

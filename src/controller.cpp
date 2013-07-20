@@ -1,188 +1,274 @@
+#include "tasks.h"
+#include "robotics/RobotDynamics3D.h"
+#include "math/SVDecomposition.h"
+#include "math/DiagonalMatrix.h"
 #include "controller.h"
 
-/*
-class OperationalSpaceController:
-    """A two-level velocity-based operational space controller class, mapping from joint space into operational space.
-    """
+#include <map>
 
-    def __init__(self, robot, dt):
-        """robot is a robot model
-        dt is simulator time interval
-        """
-        _taskList = []
-        _dqdes = None
-        _qdes = None
-        _robot = robot
-        _dt = dt
+using namespace op_space_control;
+using std::cout;
+using std::endl;
 
-    def addTask(self, task):
-        """Adds a task into operational space
-        """
-        _taskList.append(task)
+OperationalSpaceController::OperationalSpaceController( RobotDynamics3D& robot, double dt) : _robot(robot)
+{
+    //    _taskList = []; TODO
+    //    _dqdes = None;
+    //    _qdes = None;
+    _dt = dt;
+}
 
-    def getTaskByName(self, taskName):
-        """Finds a named task.
-        Users need to assure no duplicated task names in the task list manually.
-        """
-        for taski in _taskList:
-            if taski.name == taskName:
-                return taski
-        return None
+void OperationalSpaceController::AddTask( OperationalSpaceTask* task )
+{
+    _taskList.push_back(task);
+}
 
-    def setDesiredValuesFromConfig(self,qdes,tasks=None):
-        """Sets all the tasks' desired values from a given desired
-        configuration (e.g., to follow a reference trajectory).
+OperationalSpaceTask* OperationalSpaceController::GetTaskByName(std::string taskName)
+{
+    for( int i=0;i< int(_taskList.size()); i++ )
+    {
+        if( _taskList[i]->GetName() == taskName )
+            return _taskList[i];
 
-        If the 'tasks' variable is provided, it should be a list of
-        tasks for which the desired values should be set.
-        """
-        if tasks == None:
-            tasks = _taskList
-        for t in tasks:
-            t.setDesiredValue(t.getSensedValue(qdes))
+        return NULL;
+    }
+}
 
-    def setDesiredVelocityFromDifference(self,qdes0,qdes1,dt,tasks=None):
-        """Sets all the tasks' desired velocities from a given pair
-        of configurations separated by dt (e.g., to follow a reference
-        trajectory).
+void OperationalSpaceController::SetDesiredValuesFromConfig(Config qdes)
+{
+    SetDesiredValuesFromConfig( qdes, _taskList );
+}
 
-        If the 'tasks' variable is provided, it should be a list of
-        tasks for which the desired values should be set.
-        """
-        if tasks == None:
-            tasks = _taskList
-        for t in tasks:
-            xdes0 = t.getSensedValue(qdes0)
-            xdes1 = t.getSensedValue(qdes1)
-            dx = vectorops.div(t.taskDifference(xdes1,xdes0),dt)
-            t.setDesiredVelocity(dx)
+void OperationalSpaceController::SetDesiredValuesFromConfig(Config qdes, const std::vector<OperationalSpaceTask*>& tasks )
+{
+    for( int i=0;i< int(tasks.size()); i++ )
+    {
+        _taskList[i]->SetDesiredValue( _taskList[i]->GetSensedValue(qdes) );
+    }
+}
 
-    def printStatus(self,q):
-        """Prints a status printout summarizing all tasks' errors."""
-        priorities = set()
-        names = dict()
-        errors = dict()
-        totalerrors = dict()
-        for t in _taskList:
-            if t.weight==0: continue
-            priorities.add(t.level)
-            s = t.name
-            if len(s) > 8:
-                s = s[0:8]
-            err = t.getSensedError(q)
-            names.setdefault(t.level,[]).append(s)
-            errors.setdefault(t.level,[]).append("%.3f"%(vectorops.norm(err)),)
-            werrsq = vectorops.normSquared(vectorops.mul(err,t.weight))
-            totalerrors[t.level] = totalerrors.get(t.level,0.0) + werrsq
-        cols = 5
-        colwidth = 10
-        for p in priorities:
-            print "Priority",p,"weighted error^2",totalerrors[p]
-            pnames = names[p]
-            perrs = errors[p]
-            start = 0
-            while start < len(pnames):
-                last = min(start+cols,len(pnames))
-                print "  Name:  ",
-                for i in range(start,last):
-                    print pnames[i],' '*(colwidth-len(pnames[i])),
-                print
-                print "  Error: ",
-                for i in range(start,last):
-                    print perrs[i],' '*(colwidth-len(perrs[i])),
-                print
-                start=last
+void OperationalSpaceController::SetDesiredVelocityFromDifference( Config qdes0, Config qdes1, double dt )
+{
+    SetDesiredVelocityFromDifference( qdes0, qdes1, dt, _taskList );
+}
 
+void OperationalSpaceController::SetDesiredVelocityFromDifference( Config qdes0, Config qdes1, double dt, const std::vector<OperationalSpaceTask*>& tasks )
+{
+    for( int i=0;i< int(tasks.size()); i++ )
+    {
+        Vector xdes0 = _taskList[i]->GetSensedValue(qdes0);
+        Vector xdes1 = _taskList[i]->GetSensedValue(qdes1);
+        Vector dx = _taskList[i]->TaskDifference(xdes1,xdes0) / dt;
+        _taskList[i]->SetDesiredVelocity(dx);
+    }
+}
 
-    def getStackedJacobian(self, q,dq,priority):
-        """Formulates J to calculate dqdes
-        """
-        J = None
-        for taski in _taskList:
-            if taski.weight == 0:
-                continue
-            if taski.level == priority:
-                Jtemp = taski.getJacobian(q)
-                #scale by weight
-                if hasattr(taski.weight,'__iter__'):
-                    assert(len(taski.weight)==len(Jtemp))
-                    #treat as an elementwise weight
-                    for i in xrange(len(Jtemp)):
-                        Jtemp[i] = vectorops.mul(Jtemp[i],taski.weight[i])
-                else:
-                    for i in xrange(len(Jtemp)):
-                        Jtemp[i] = vectorops.mul(Jtemp[i],taski.weight)
-                if J is None:
-                    J = Jtemp
-                else:
-                    J = np.vstack((J, Jtemp))
-        return J
+void OperationalSpaceController::PrintStatus(Config q)
+{
+    std::vector<int> priorities;
+    std::map<int,std::string> names;
+    std::map<int,double> errors;
+    std::map<int,double> totalerrors;
 
-    def getStackedVelocity(self, q, dq, priority):
-        """Formulates dx to calculate dqdes
-        """
-        V = None
-        for taski in _taskList:
-            if taski.weight == 0:
-                continue
-            if taski.level == priority:
-                #scale by weight
-                Vtemp = vectorops.mul(taski.getCommandVelocity(q, dq, _dt),taski.weight)
-                if V is None:
-                    V = Vtemp
-                else:
-                    V = np.hstack((V, Vtemp))
-        return V
+    for( int i=0;i< int(_taskList.size()); i++ )
+    {
+        if( _taskList[i]->GetWeight().empty() )
+            continue;
+        priorities.push_back( _taskList[i]->GetPriority() );
+        Vector err = _taskList[i]->GetSensedError(q);
+        names[_taskList[i]->GetPriority()] = _taskList[i]->GetName();
+//        names.setdefault(t.level,[]).append(s);
+//        errors.setdefault(t.level,[]).append("%.3f"%(vectorops.norm(err)),);
+//        werrsq = vectorops.normSquared(vectorops.mul(err,t.weight));
+//        totalerrors[t.level] = totalerrors.get(t.level,0.0) + werrsq;
+    }
+    int cols = 5;
+    int colwidth = 10;
+    for( int p=0;p< int(priorities.size()); p++ )
+    {
+        cout << "Priority" << p << "weighted error^2" << totalerrors[p] << endl;
+        std::string pnames = names[p];
+        double perrs = errors[p];
+        int start = 0;
+        while( start < pnames.size() )
+        {
+            int last = std::min( start+cols, int(pnames.size()) );
+            cout << "  Name:  ";
+            for( int j=start; j<last; j++ )
+            {
+                //cout << pnames[i] << ' '*(colwidth-len(pnames[i])) << endl; TODO
+            }
+            cout << "  Error: ";
+            for( int j=start; j<last; j++ )
+            {
+                //cout << perrs[i] << ' '*(colwidth-len(perrs[i])) << endl; TODO
+            }
+            cout << endl;
+            start=last;
+        }
+    }
+}
 
-    def checkMax(self, limit):
-        """Check dqdes against joint velocity limits.
-        """
-        limits = _robot.getVelocityLimits()
-        m = max(vectorops.div(_dqdes, limits))
-        if m > limit:
-            for i in xrange(len(_dqdes)):
-                _dqdes[i] /= m
+Matrix OperationalSpaceController::GetStackedJacobian( Config q, Vector dq, int priority )
+{
+    Matrix J;
+    for( int i=0;i< int(_taskList.size()); i++ )
+    {
+        if( _taskList[i]->GetWeight().empty() )
+            continue;
 
-    def solve(self, q,dq,dt):
-        """Takes sensed q,dq, timestep dt and returns dqdes and qdes
-        in joint space.
-        """
-        for task in _taskList:
-            task.updateState(q,dq,dt)
-        # priority 1
-        J1 = _getStackedJacobian(q,dq,1)
-        v1 = _getStackedVelocity(q,dq,1)
-        J1inv = np.linalg.pinv(np.array(J1), rcond=1e-3)
-        dq1 = np.dot(J1inv, np.array(v1))
+        if( _taskList[i]->GetPriority() == priority )
+        {
+            Matrix Jtemp = _taskList[i]->GetJacobian(q);
+            // scale by weight
+            if( _taskList[i]->GetWeight().size() > 1 )
+            {
+                assert(_taskList[i]->GetWeight().size()==Jtemp.numCols()); // TODO check collums
 
-        # priority 2
-        N = np.eye(len(dq1)) - np.dot(J1inv, np.array(J1))
-        Jtask = _getStackedJacobian(q,dq,2)
-        if Jtask is not None:
-            Vtask = _getStackedVelocity(q,dq,2)
-            JtaskN = np.dot(Jtask, N)
-            assert np.isfinite(Jtask).all()
-            Vtask_m_resid = Vtask - np.dot(Jtask, dq1)
-            try:
-                JtaskNinv = np.linalg.pinv(JtaskN, rcond=1e-3)
-                z = np.dot(JtaskNinv, Vtask_m_resid)
-            except np.linalg.LinAlgError:
-                #print "SVD failed, trying lstsq"
-                z = np.linalg.lstsq(Jtask,Vtask_m_resid,rcond=1e-3)[0]
-            dqtask = np.dot(N, z)
-        else:
-            dqtask = [0.0]*len(dq1)
+                Vector row;
+                // treat as an elementwise weight
+                for( int j=0;j< int(Jtemp.numRows()); j++ )
+                {
+                    Jtemp.getRowRef( j, row );
+                    row = Jtemp.row(j) * _taskList[j]->GetWeight()[j]; // TODO check that it's rows or coll ??
+                }
+            }
+            else
+            {
+                Vector row;
+                // treat as an elementwise weight
+                for( int j=0;j< int(Jtemp.numRows()); j++ )
+                {
+                    Jtemp.getRowRef( j, row );
+                    row = Jtemp.row(j) * _taskList[j]->GetWeight()[0]; // TODO check that it's rows or coll ??
+                }
+            }
 
-        #compose the velocities together
-        _dqdes = dq1 + dqtask
-        _checkMax(1)
+            if( J.numRows() == 0 && J.numCols() == 0 ) // TODO
+                J = Jtemp;
+            else
+            {
+                //Math::VStack(Jtemp,J); // TODO
+            }
+        }
+    }
+    return J;
+}
 
-        _qdes = vectorops.madd(q, _dqdes, _dt)
+Vector OperationalSpaceController::GetStackedVelocity(Config q, Vector dq, int priority)
+{
+    Vector V;
+    for( int i=0;i< int(_taskList.size()); i++ )
+    {
+        if( _taskList[i]->GetWeight().empty() )
+            continue;
 
-        return (_dqdes, _qdes)
+        if( _taskList[i]->GetPriority() == priority )
+        {
+            // scale by weight
+            Vector Vtemp = _taskList[i]->GetCommandVelocity( q, dq, _dt) * _taskList[i]->GetWeight()[0]; // TODO
 
-    def advance(self,q,dq,dt):
-        """Updates all tasks states"""
-        for task in _taskList:
-            task.advance(q,dq,dt)
-*/
+            if( V.empty() ) // TODO
+            {
+                V = Vtemp;
+            }
+            else
+            {
+                //Math::HStack( Vtemp, V );
+                //V = np.hstack((V, )); // TODO
+            }
+        }
+
+    }
+    return V;
+}
+
+void OperationalSpaceController::CheckMax(double limit)
+{
+    Vector limits = _robot.velMax;
+
+    for(int i=0;i<_dqdes.size();i++)
+        limits[i] = _dqdes[i] / limits[i];
+
+    double m = limits.maxElement();
+
+    if( m > limit )
+    {
+        for( int i=0; i<_dqdes.size();i++)
+        {
+            _dqdes[i] /= m;
+        }
+    }
+}
+
+Vector OperationalSpaceController::Solve( Config q, Vector dq, double dt )
+{
+    for( int i=0;i< int(_taskList.size()); i++ )
+    {
+        _taskList[i]->UpdateState( q, dq, dt );
+    }
+
+    // priority 1
+    Matrix J1 = GetStackedJacobian(q,dq,1);
+    Vector v1 = GetStackedVelocity(q,dq,1);
+    //Matrix J1inv = np.linalg.pinv(np.array(J1), rcond=1e-3);
+    Matrix J1inv;
+    Math::SVDecomposition<double> svd(J1);
+    svd.getInverse( J1inv );
+    Vector dq1; J1inv.mul(v1,dq1);
+
+    // priority 2
+    Matrix eye(dq1.size(),dq1.size()); eye.setIdentity();
+    Matrix Np; J1inv.mul( J1, Np );
+    Matrix N; N.sub( eye, Np );
+    Matrix Jtask = GetStackedJacobian(q,dq,2);
+
+    Vector dqtask;
+
+    if ( Jtask.numCols() != 0 && Jtask.numRows() )
+    {
+        Vector Vtask = GetStackedVelocity(q,dq,2);
+        Matrix JtaskN; Jtask.mul(Jtask,N);
+        //assert np.isfinite(Jtask).all(); TODO
+        Vector Jtasktmp; Jtask.mul( dq1, Jtasktmp );
+        Vector Vtask_m_resid; Vtask_m_resid.sub( Vtask , Jtasktmp );
+        Vector z;
+        try
+        {
+            Matrix JtaskNinv;
+            Math::SVDecomposition<double> svd(JtaskN);
+            svd.getInverse( JtaskNinv );
+            JtaskNinv.mul(Vtask_m_resid,z);
+            //JtaskNinv = np.linalg.pinv(JtaskN, rcond=1e-3);
+            //z = JtaskNinv.dot(Vtask_m_resid);
+        }
+        catch(...)
+        {
+            //except np.linalg.LinAlgError:
+                // print "SVD failed, trying lstsq"
+                //z = np.linalg.lstsq(Jtask,Vtask_m_resid,rcond=1e-3)[0];
+                //dqtask = np.dot(N, z)
+        }
+    }
+    else
+    {
+        // dqtask = [0.0]*len(dq1); TODO
+    }
+
+    // compose the velocities together
+    _dqdes.add( dq1, dqtask );
+    CheckMax(1);
+
+    _qdes.madd( q, _dt); // TODO Check
+
+    //return (_dqdes, _qdes); // TODO stack them
+    return _dqdes;
+}
+
+void OperationalSpaceController::Advance( Config q, Vector dq, double dt )
+{
+    for( int i=0; i<int(_taskList.size()); i++ )
+    {
+        _taskList[i]->Advance(q,dq,dt);
+    }
+}
