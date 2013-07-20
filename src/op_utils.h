@@ -13,6 +13,7 @@ std::vector<double> GetStdVector(double value);
 std::vector<double> GetStdVector(const Math3D::Vector3& pos);
 Math3D::Vector3 GetVector3(const Math3D::Vector& vect);
 float* GetGlVector3(const Math3D::Vector3& pos);
+Vector GetVector(const Math3D::Vector3& pos);
 
 void PushRotationToVector( const Math3D::Matrix3& R, Math::Vector& x );
 void PopRotationFromVector( Math::Vector& x, Math3D::Matrix3& R );
@@ -24,5 +25,7 @@ void PushFrameToVector( const Frame3D& T, Math::Vector& x );
 void PopFrameFromVector( Math::Vector& x, Frame3D& T );
 
 Math::Vector GetPushedFrame( const Frame3D& T );
+
+Vector3 Error(const Matrix3& R1, const Matrix3& R2);
 
 #endif // UTILS_H

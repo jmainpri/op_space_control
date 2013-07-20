@@ -240,7 +240,7 @@ LinkTask::LinkTask( RobotDynamics3D& robot, int linkNo, std::string taskType, in
     SetTaskType( taskType );
 }
 
-void LinkTask::SetTaskType(std::string taskType)
+void LinkTask::SetTaskType(const std::string& taskType)
 {
     if( taskType == "po" )
     {
@@ -280,9 +280,8 @@ Vector LinkTask::GetSensedValue( const Vector& q )
 
     if( taskType_ == po )
     {
-        T.inplaceShift( localPosition_ ); // TODO check python
+        T.t = Vector3( T * localPosition_ );
         PushFrameToVector( T, x );
-
     }
     else if( taskType_ == position )
     {
@@ -310,10 +309,17 @@ Vector LinkTask::TaskDifference( const Vector& a, const Vector& b )
         PopFrameFromVector( atmp, Ta ); // TODO change pile
         PopFrameFromVector( btmp, Tb );
 
-        Matrix3 Rbinv; Rbinv.setInverse( Tb.R );
-        //Ta.R * Rbinv  + (a - b); // TODO add the moment comutation see python
-        Vector x_buff;
-        return x_buff;
+        Vector3 p_e = Ta.t - Ta.t;
+        Vector3 o_e = Error( Ta.R, Tb.R );
+
+        Vector x_e(6);
+        x_e[0] = p_e[0];
+        x_e[1] = p_e[1];
+        x_e[2] = p_e[2];
+        x_e[3] = o_e[0];
+        x_e[4] = o_e[1];
+        x_e[5] = o_e[2];
+        return x_e;
     }
     else if( taskType_ == position )
     {
@@ -327,14 +333,13 @@ Vector LinkTask::TaskDifference( const Vector& a, const Vector& b )
         Vector btmp = b;
         PopRotationFromVector( atmp, Ra );
         PopRotationFromVector( btmp, Rb );
-        Vector x_buff; // TODO rotation see python
-        return x_buff;
+        return GetVector( Error( Ra, Rb ) );
     }
     else
     {
         // raise ValueError("Invalid taskType "+taskType_) TODO exeption
-        Vector x_buff;
-        return x_buff;
+        Vector x_e;
+        return x_e;
     }
 }
 
@@ -364,10 +369,10 @@ Matrix LinkTask::GetJacobian( const Config& q )
     // check if relative transform task, modify Jacobian accordingly
     if( baseLinkNo_ >= 0 )
     {
+        Matrix Jb; // Jacobian
         Frame3D Tbinv;
         Tbinv.setInverse( robot_.links[baseLinkNo_].T_World );
         Vector3 pb = Tbinv * ( robot_.links[linkNo_].T_World * localPosition_ );
-        Matrix Jb;
 
         if( taskType_ == po )
         {
@@ -375,7 +380,7 @@ Matrix LinkTask::GetJacobian( const Config& q )
         }
         else if( taskType_ == position )
         {
-            robot_.GetPositionJacobian( pb, baseLinkNo_, Jb );
+            robot_.GetPositionJacobian  ( pb, baseLinkNo_, Jb );
         }
         else if( taskType_ == orientation )
         {
@@ -383,10 +388,10 @@ Matrix LinkTask::GetJacobian( const Config& q )
         }
 
         Vector row;
-        for ( int j=0; j<3; j++ )
+        for ( int i=0; i<J.numRows(); i++ )
         {
-            J.getRowRef( j, row );
-            row = J.row(j) - Jb.row(j); // TODO check that it's rows or coll ??
+            J.getRowRef( i, row );
+            row = J.row(i) - Jb.row(i);
         }
     }
     return J;
@@ -457,7 +462,7 @@ Vector JointTask::GetSensedValue( const Config& q )
 {
     Vector x( jointIndices_.size() );
 
-    for(int i=0;i<(jointIndices_.size());i++)
+    for(int i=0;i<int(jointIndices_.size());i++)
         x[i] = q[jointIndices_[i]];
 
     return x;
@@ -473,7 +478,7 @@ Matrix JointTask::GetJacobian( const Config& q )
         Vector Ji( robot_.links.size(), 0.0 );
         Ji( jointIndices_[i] ) = 1;
         J.getRowRef( i, row );
-        row = Ji; // TODO check that it's rows or coll ??
+        row = Ji;
     }
     return J;
 }
@@ -523,6 +528,7 @@ Matrix JointLimitTask::GetJacobian( const Config& q )
     return J;
 }
 
+// TODO test this task
 void JointLimitTask::UpdateState(  const Config& q, const Vector&  dq, double dt )
 {
     active_.clear();

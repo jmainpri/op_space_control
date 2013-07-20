@@ -163,7 +163,7 @@ public:
     void DrawGL( const Vector& q );
 
 private:
-    void SetTaskType( std::string taskType );
+    void SetTaskType( const std::string &taskType );
     enum TaskType { position, orientation, po } taskType_;
     int linkNo_;
     int baseLinkNo_;
