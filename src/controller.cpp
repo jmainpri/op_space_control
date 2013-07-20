@@ -18,6 +18,14 @@ OperationalSpaceController::OperationalSpaceController( RobotDynamics3D& robot, 
     _dt = dt;
 }
 
+OperationalSpaceController::~OperationalSpaceController()
+{
+    for( int i=0;i< int(_taskList.size()); i++ )
+    {
+        delete _taskList[i];
+    }
+}
+
 void OperationalSpaceController::AddTask( OperationalSpaceTask* task )
 {
     _taskList.push_back(task);

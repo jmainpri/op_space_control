@@ -15,6 +15,9 @@ public:
     //! dt is simulator time interval
     OperationalSpaceController( RobotDynamics3D& robot, double dt );
 
+    //! delete all tasks
+    ~OperationalSpaceController();
+
     //! Adds a task into operational space
     void AddTask(  OperationalSpaceTask* task );
 

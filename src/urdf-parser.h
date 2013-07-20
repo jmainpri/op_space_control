@@ -68,14 +68,17 @@ class Robot : public RobotDynamics3D
 {
 public:
     Robot() : RobotDynamics3D() { }
+
     // Main function of the urdf parser
     bool load_urdf( std::string filename );
+
+    // Index link names
+    std::vector<std::string> linkNames;
 
 private:
     Vector accMax;   //conservative acceleration limits, used by DynamicPath
     std::vector<RobotJoint> joints;
     std::vector<RobotJointDriver> drivers;
-    std::vector<std::string> linkNames;
     std::vector<std::string> driverNames;
     Matrix lipschitzMatrix;
 };

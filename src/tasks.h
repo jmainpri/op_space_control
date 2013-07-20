@@ -27,13 +27,13 @@ public:
     }
 
     //! User calls this to set task state xdes
-    Vector SetDesiredValue( Vector xdes )
+    void SetDesiredValue( Vector xdes )
     {
         _xdes = xdes;
     }
 
     //! User calls this to set task state xdes
-    Vector SetDesiredVelocity( Vector dxdes )
+    void SetDesiredVelocity( Vector dxdes )
     {
         _dxdes = dxdes;
     }
@@ -126,7 +126,11 @@ protected:
 //! Center of Mass position task subclass
 class COMTask : public OperationalSpaceTask
 {
+public:
     COMTask( RobotDynamics3D& robot, int baseLinkNo = -1 );
+
+    //! Set base link id
+    void SetBaseLinkNo(int baseLinkNo) { _baseLinkNo = baseLinkNo; }
 
     double GetMass();
 
@@ -136,6 +140,7 @@ class COMTask : public OperationalSpaceTask
     //! Returns axis-weighted CoM Jacobian by averaging
     Matrix GetJacobian( Config q );
 
+    //! Draws useful sanity check of the task
     void DrawGL( Config q );
 
 private:
@@ -149,7 +154,10 @@ private:
 //! Supports both absolute and relative positioning.
 class LinkTask : public OperationalSpaceTask
 {
+public:
     LinkTask( RobotDynamics3D& robot, int linkNo, std::string taskType, int baseLinkNo = -1  );
+    void SetBaseLinkNo(int baseLinkNo) { _baseLinkNo = baseLinkNo; }
+    void SetLocalPosition(Vector3 p) { _localPosition = p; }
     Vector GetSensedValue( Config q );
     Vector TaskDifference( Vector a, Vector b);
     Matrix GetJacobian( Config q );
@@ -171,6 +179,7 @@ private:
 //! A joint angle task class
 class JointTask : public OperationalSpaceTask
 {
+public:
     JointTask( RobotDynamics3D& robot, const std::vector<int>& jointIndices );
 
     Vector GetSensedValue( Config q );
@@ -188,6 +197,7 @@ private:
 //! Or, increase weight on this joint task as joint gets closer to its limit
 class JointLimitTask : public OperationalSpaceTask
 {
+public:
     JointLimitTask(  RobotDynamics3D& robot );
 
     void UpdateState( Config q, Vector dq, double dt );
