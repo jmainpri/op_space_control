@@ -57,11 +57,11 @@ public:
     void Advance( Config q, Vector dq, double dt );
 
 private:
-    std::vector<OperationalSpaceTask*> _taskList;
-    Vector _dqdes;
-    Vector _qdes;
-    RobotDynamics3D& _robot;
-    double _dt;
+    std::vector<OperationalSpaceTask*> taskList_;
+    Vector dqdes_;
+    Vector qdes_;
+    RobotDynamics3D& robot_;
+    double dt_;
 };
 
 }

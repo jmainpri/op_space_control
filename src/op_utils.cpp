@@ -39,6 +39,15 @@ Vector3 GetVector3(const Vector& vect)
     return pos;
 }
 
+float* GetGlVector3(const Math3D::Vector3& pos)
+{
+    float* vect = new float[3];
+    vect[0] = pos[0];
+    vect[1] = pos[1];
+    vect[2] = pos[2];
+    return vect;
+}
+
 void PushRotationToVector( const Matrix3& R, Vector& x )
 {
     int size = x.size();

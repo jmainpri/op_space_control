@@ -12,6 +12,7 @@ std::vector<double> GetStdVector(double value);
 
 std::vector<double> GetStdVector(const Math3D::Vector3& pos);
 Math3D::Vector3 GetVector3(const Math3D::Vector& vect);
+float* GetGlVector3(const Math3D::Vector3& pos);
 
 void PushRotationToVector( const Math3D::Matrix3& R, Math::Vector& x );
 void PopRotationFromVector( Math::Vector& x, Math3D::Matrix3& R );

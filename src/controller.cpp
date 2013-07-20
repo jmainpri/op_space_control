@@ -10,33 +10,33 @@ using namespace op_space_control;
 using std::cout;
 using std::endl;
 
-OperationalSpaceController::OperationalSpaceController( RobotDynamics3D& robot, double dt) : _robot(robot)
+OperationalSpaceController::OperationalSpaceController( RobotDynamics3D& robot, double dt) : robot_(robot)
 {
-    //    _taskList = []; TODO
-    //    _dqdes = None;
-    //    _qdes = None;
-    _dt = dt;
+    //    taskList_ = []; TODO
+    //    dqdes_ = None;
+    //    qdes_ = None;
+    dt_ = dt;
 }
 
 OperationalSpaceController::~OperationalSpaceController()
 {
-    for( int i=0;i< int(_taskList.size()); i++ )
+    for( int i=0;i< int(taskList_.size()); i++ )
     {
-        delete _taskList[i];
+        delete taskList_[i];
     }
 }
 
 void OperationalSpaceController::AddTask( OperationalSpaceTask* task )
 {
-    _taskList.push_back(task);
+    taskList_.push_back(task);
 }
 
 OperationalSpaceTask* OperationalSpaceController::GetTaskByName(std::string taskName)
 {
-    for( int i=0;i< int(_taskList.size()); i++ )
+    for( int i=0;i< int(taskList_.size()); i++ )
     {
-        if( _taskList[i]->GetName() == taskName )
-            return _taskList[i];
+        if( taskList_[i]->GetName() == taskName )
+            return taskList_[i];
 
         return NULL;
     }
@@ -44,30 +44,30 @@ OperationalSpaceTask* OperationalSpaceController::GetTaskByName(std::string task
 
 void OperationalSpaceController::SetDesiredValuesFromConfig(Config qdes)
 {
-    SetDesiredValuesFromConfig( qdes, _taskList );
+    SetDesiredValuesFromConfig( qdes, taskList_ );
 }
 
 void OperationalSpaceController::SetDesiredValuesFromConfig(Config qdes, const std::vector<OperationalSpaceTask*>& tasks )
 {
     for( int i=0;i< int(tasks.size()); i++ )
     {
-        _taskList[i]->SetDesiredValue( _taskList[i]->GetSensedValue(qdes) );
+        taskList_[i]->SetDesiredValue( taskList_[i]->GetSensedValue(qdes) );
     }
 }
 
 void OperationalSpaceController::SetDesiredVelocityFromDifference( Config qdes0, Config qdes1, double dt )
 {
-    SetDesiredVelocityFromDifference( qdes0, qdes1, dt, _taskList );
+    SetDesiredVelocityFromDifference( qdes0, qdes1, dt, taskList_ );
 }
 
 void OperationalSpaceController::SetDesiredVelocityFromDifference( Config qdes0, Config qdes1, double dt, const std::vector<OperationalSpaceTask*>& tasks )
 {
     for( int i=0;i< int(tasks.size()); i++ )
     {
-        Vector xdes0 = _taskList[i]->GetSensedValue(qdes0);
-        Vector xdes1 = _taskList[i]->GetSensedValue(qdes1);
-        Vector dx = _taskList[i]->TaskDifference(xdes1,xdes0) / dt;
-        _taskList[i]->SetDesiredVelocity(dx);
+        Vector xdes0 = taskList_[i]->GetSensedValue(qdes0);
+        Vector xdes1 = taskList_[i]->GetSensedValue(qdes1);
+        Vector dx = taskList_[i]->TaskDifference(xdes1,xdes0) / dt;
+        taskList_[i]->SetDesiredVelocity(dx);
     }
 }
 
@@ -78,13 +78,13 @@ void OperationalSpaceController::PrintStatus(Config q)
     std::map<int,double> errors;
     std::map<int,double> totalerrors;
 
-    for( int i=0;i< int(_taskList.size()); i++ )
+    for( int i=0;i< int(taskList_.size()); i++ )
     {
-        if( _taskList[i]->GetWeight().empty() )
+        if( taskList_[i]->GetWeight().empty() )
             continue;
-        priorities.push_back( _taskList[i]->GetPriority() );
-        Vector err = _taskList[i]->GetSensedError(q);
-        names[_taskList[i]->GetPriority()] = _taskList[i]->GetName();
+        priorities.push_back( taskList_[i]->GetPriority() );
+        Vector err = taskList_[i]->GetSensedError(q);
+        names[taskList_[i]->GetPriority()] = taskList_[i]->GetName();
 //        names.setdefault(t.level,[]).append(s);
 //        errors.setdefault(t.level,[]).append("%.3f"%(vectorops.norm(err)),);
 //        werrsq = vectorops.normSquared(vectorops.mul(err,t.weight));
@@ -120,25 +120,25 @@ void OperationalSpaceController::PrintStatus(Config q)
 Matrix OperationalSpaceController::GetStackedJacobian( Config q, Vector dq, int priority )
 {
     Matrix J;
-    for( int i=0;i< int(_taskList.size()); i++ )
+    for( int i=0;i< int(taskList_.size()); i++ )
     {
-        if( _taskList[i]->GetWeight().empty() )
+        if( taskList_[i]->GetWeight().empty() )
             continue;
 
-        if( _taskList[i]->GetPriority() == priority )
+        if( taskList_[i]->GetPriority() == priority )
         {
-            Matrix Jtemp = _taskList[i]->GetJacobian(q);
+            Matrix Jtemp = taskList_[i]->GetJacobian(q);
             // scale by weight
-            if( _taskList[i]->GetWeight().size() > 1 )
+            if( taskList_[i]->GetWeight().size() > 1 )
             {
-                assert(_taskList[i]->GetWeight().size()==Jtemp.numCols()); // TODO check collums
+                assert(taskList_[i]->GetWeight().size()==Jtemp.numCols()); // TODO check collums
 
                 Vector row;
                 // treat as an elementwise weight
                 for( int j=0;j< int(Jtemp.numRows()); j++ )
                 {
                     Jtemp.getRowRef( j, row );
-                    row = Jtemp.row(j) * _taskList[j]->GetWeight()[j]; // TODO check that it's rows or coll ??
+                    row = Jtemp.row(j) * taskList_[j]->GetWeight()[j]; // TODO check that it's rows or coll ??
                 }
             }
             else
@@ -148,7 +148,7 @@ Matrix OperationalSpaceController::GetStackedJacobian( Config q, Vector dq, int 
                 for( int j=0;j< int(Jtemp.numRows()); j++ )
                 {
                     Jtemp.getRowRef( j, row );
-                    row = Jtemp.row(j) * _taskList[j]->GetWeight()[0]; // TODO check that it's rows or coll ??
+                    row = Jtemp.row(j) * taskList_[j]->GetWeight()[0]; // TODO check that it's rows or coll ??
                 }
             }
 
@@ -166,15 +166,15 @@ Matrix OperationalSpaceController::GetStackedJacobian( Config q, Vector dq, int 
 Vector OperationalSpaceController::GetStackedVelocity(Config q, Vector dq, int priority)
 {
     Vector V;
-    for( int i=0;i< int(_taskList.size()); i++ )
+    for( int i=0;i< int(taskList_.size()); i++ )
     {
-        if( _taskList[i]->GetWeight().empty() )
+        if( taskList_[i]->GetWeight().empty() )
             continue;
 
-        if( _taskList[i]->GetPriority() == priority )
+        if( taskList_[i]->GetPriority() == priority )
         {
             // scale by weight
-            Vector Vtemp = _taskList[i]->GetCommandVelocity( q, dq, _dt) * _taskList[i]->GetWeight()[0]; // TODO
+            Vector Vtemp = taskList_[i]->GetCommandVelocity( q, dq, dt_) * taskList_[i]->GetWeight()[0]; // TODO
 
             if( V.empty() ) // TODO
             {
@@ -193,27 +193,27 @@ Vector OperationalSpaceController::GetStackedVelocity(Config q, Vector dq, int p
 
 void OperationalSpaceController::CheckMax(double limit)
 {
-    Vector limits = _robot.velMax;
+    Vector limits = robot_.velMax;
 
-    for(int i=0;i<_dqdes.size();i++)
-        limits[i] = _dqdes[i] / limits[i];
+    for(int i=0;i<dqdes_.size();i++)
+        limits[i] = dqdes_[i] / limits[i];
 
     double m = limits.maxElement();
 
     if( m > limit )
     {
-        for( int i=0; i<_dqdes.size();i++)
+        for( int i=0; i<dqdes_.size();i++)
         {
-            _dqdes[i] /= m;
+            dqdes_[i] /= m;
         }
     }
 }
 
 Vector OperationalSpaceController::Solve( Config q, Vector dq, double dt )
 {
-    for( int i=0;i< int(_taskList.size()); i++ )
+    for( int i=0;i< int(taskList_.size()); i++ )
     {
-        _taskList[i]->UpdateState( q, dq, dt );
+        taskList_[i]->UpdateState( q, dq, dt );
     }
 
     // priority 1
@@ -264,19 +264,19 @@ Vector OperationalSpaceController::Solve( Config q, Vector dq, double dt )
     }
 
     // compose the velocities together
-    _dqdes.add( dq1, dqtask );
+    dqdes_.add( dq1, dqtask );
     CheckMax(1);
 
-    _qdes.madd( q, _dt); // TODO Check
+    qdes_.madd( q, dt_); // TODO Check
 
-    //return (_dqdes, _qdes); // TODO stack them
-    return _dqdes;
+    //return (dqdes_, qdes_); // TODO stack them
+    return dqdes_;
 }
 
 void OperationalSpaceController::Advance( Config q, Vector dq, double dt )
 {
-    for( int i=0; i<int(_taskList.size()); i++ )
+    for( int i=0; i<int(taskList_.size()); i++ )
     {
-        _taskList[i]->Advance(q,dq,dt);
+        taskList_[i]->Advance(q,dq,dt);
     }
 }
