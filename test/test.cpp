@@ -107,5 +107,8 @@ int main(int argc, char** argv)
     robot.load_urdf("/home/jmainpri/workspace/ros_workspace/src/drchubo/drchubo-v2/robots/drchubo-v2.urdf");
     //robot.load_urdf("/home/jmainpri/workspace/ros_workspace/src/drchubo/drchubo-v1/robots/drchubo-v1.urdf");
 
+    cout << "Number of links : " << robot.links.size() << endl;
+    cout << "robot.q.n : " << robot.q.n << endl;
+
     create_tasks( robot, robot.q );
 }

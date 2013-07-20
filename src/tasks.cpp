@@ -5,7 +5,6 @@ using namespace op_space_control;
 using std::cout;
 using std::endl;
 
-
 OperationalSpaceTask::OperationalSpaceTask()
 {
     // TODO should be virtual
@@ -23,7 +22,7 @@ OperationalSpaceTask::OperationalSpaceTask()
 }
 
 // vcmd = hP*eP + hD*eV + hI*eI
-Vector OperationalSpaceTask::GetCommandVelocity( Vector q, Vector dq, double dt )
+Vector OperationalSpaceTask::GetCommandVelocity( const Config& q, const Vector&  dq, double dt )
 {
     Vector eP = GetSensedError( q );
 
@@ -52,7 +51,7 @@ Vector OperationalSpaceTask::GetCommandVelocity( Vector q, Vector dq, double dt 
 
 // madd( a, b, c ) = a + c*b
 
-void OperationalSpaceTask::Advance( Vector q, Vector dq, double dt )
+void OperationalSpaceTask::Advance( const Config& q, const Vector&  dq, double dt )
 {
     if( weight_.size() > 0 )
     {
@@ -72,19 +71,19 @@ void OperationalSpaceTask::Advance( Vector q, Vector dq, double dt )
     qLast_ = q; // update qLast
 }
 
-Vector OperationalSpaceTask::GetSensedError(Vector q)
+Vector OperationalSpaceTask::GetSensedError( const Vector& q)
 {
     // Returns x(q)-xdes where - is the task-space differencing operator
     return TaskDifference( GetSensedValue(q), xdes_ );
 }
 
-Vector OperationalSpaceTask::TaskDifference( Vector a, Vector b )
+Vector OperationalSpaceTask::TaskDifference( const Vector& a, const Vector& b )
 {
     // Default: assumes a Cartesian space
     return a - b;
 }
 
-Vector OperationalSpaceTask::GetSensedVelocity(Vector q, Vector dq, double dt)
+Vector OperationalSpaceTask::GetSensedVelocity( const Config& q, const Vector&  dq, double dt )
 {
     // Gets task velocity from sensed configuration q
     // Default implementation uses finite differencing
@@ -120,7 +119,7 @@ COMTask::COMTask( RobotDynamics3D& robot, int baseLinkNo ) : OperationalSpaceTas
 
 double COMTask::GetMass()
 {
-    double mass = 0.0;
+    double mass = 0.0; // Compute total mass !! TODO check against robot class function
 
     for(int i=0;i<int(robot_.links.size());i++)
     {
@@ -130,18 +129,18 @@ double COMTask::GetMass()
     return mass;
 }
 
-Vector COMTask::GetSensedValue(Vector q)
+Vector COMTask::GetSensedValue( const Config& q )
 {
     robot_.UpdateConfig(q);
 
-    Vector3 com_n(0.0);
+    // Compute the robot center of mass !! TODO check against robot class function
+    Vector3 com(0.0);
     for(int i=0;i<int(robot_.links.size());i++)
     {
-        RobotLink3D& link = robot_.links[i];
-        com_n.madd( link.com, link.mass ); // TODO Check the reference frame
+        const RobotLink3D& link = robot_.links[i];
+        com.madd( link.T_World * link.com, link.mass );
     }
-
-    Vector3 com = com_n / mass_;  // Divide by robot total mass
+    com /= mass_;
 
     if(baseLinkNo_ >= 0)
     {
@@ -155,7 +154,7 @@ Vector COMTask::GetSensedValue(Vector q)
     return x;
 }
 
-Matrix COMTask::GetJacobian(Vector q)
+Matrix COMTask::GetJacobian( const Config& q )
 {
     robot_.UpdateConfig(q);
 
@@ -163,43 +162,42 @@ Matrix COMTask::GetJacobian(Vector q)
     Matrix Jcom( numLinks, 3, 0.0 );
     for ( int i=0; i<numLinks; i++ )
     {
+        Matrix Ji; // Position jacobian of ith link com, (3,q.n)(rows,cols)
         const RobotLink3D& link = robot_.links[i];
-        Matrix Ji;
-        robot_.GetPositionJacobian( link.com, i, Ji ); // TODO check this in python
+        robot_.GetPositionJacobian( link.com, i, Ji );
         Ji *= link.mass;
 
         Vector row;
-        for ( int j=0; j<3; j++ )
+        for ( int j=0; j<3; j++ ) // on x,y,z
         {
             Jcom.getRowRef( j, row );
-            row = Jcom.row(j) + Ji.row(j); // TODO check that it's rows or coll ??
+            row = Jcom.row(j) + Ji.row(j);
         }
     }
 
     Jcom /= mass_; // Divide by robot total mass
 
-    // if relative positioning task, subtract out COM jacobian w.r.t. base
+    // If relative positioning task, subtract out COM jacobian w.r.t. base
     if( baseLinkNo_ >= 0 )
     {
-        Matrix Jb;
+        Matrix Jb; // Full jacobian with respect to base, (6,q.n)(rows,cols)
         Frame3D Tbinv;
-
-        Tbinv.setInverse( robot_.links[baseLinkNo_].T_World ); // TODO check if that should be world ?? Ask Kris for getInverse in Frame3D
+        Tbinv.setInverse( robot_.links[baseLinkNo_].T_World ); // TODO Ask Kris for getInverse in Frame3D
         Vector3 pb = Tbinv * GetVector3( GetSensedValue( q ) );
         robot_.GetFullJacobian( pb, baseLinkNo_, Jb );
 
         Vector row;
-        for ( int j=0; j<3; j++ )
+        for ( int j=0; j<3; j++ ) // on x,y,z
         {
             Jcom.getRowRef( j, row );
-            row = Jcom.row(j) - Jb.row(j); // TODO check that it's rows or coll ??
+            row = Jcom.row(j) - Jb.row(j);
         }
     }
 
     return Jcom;
 }
 
-void COMTask::DrawGL(Config q)
+void COMTask::DrawGL( const Config& q)
 {
     Vector3 x = GetVector3( GetSensedValue(q) );
     Vector3 xdes = GetVector3( xdes_ );
@@ -230,7 +228,6 @@ void COMTask::DrawGL(Config q)
 LinkTask::LinkTask( RobotDynamics3D& robot, int linkNo, std::string taskType, int baseLinkNo ) : OperationalSpaceTask(), robot_( robot )
 {
     linkNo_ = linkNo;
-    taskType_ = taskType;
     baseLinkNo_ = baseLinkNo;
     hP_ = -1;
     hD_ = 0;
@@ -240,17 +237,30 @@ LinkTask::LinkTask( RobotDynamics3D& robot, int linkNo, std::string taskType, in
     localPosition_[2] = 0;
     name_ = "Link";
 
-    if( taskType_ == "po" || taskType_ == "position" || taskType_ == "orientation" )
+    SetTaskType( taskType );
+}
+
+void LinkTask::SetTaskType(std::string taskType)
+{
+    if( taskType == "po" )
     {
-        //pass
+        taskType_ = po;
+    }
+    else if( taskType == "position" )
+    {
+        taskType_ = position;
+    }
+    else if( taskType == "orientation" )
+    {
+        taskType_ = orientation;
     }
     else
     {
-        //raise ValueError("Invalid taskType "+taskType_)
+        //raise ValueError("Invalid taskType "+taskType_) TODO exeption
     }
 }
 
-Vector LinkTask::GetSensedValue( Vector q )
+Vector LinkTask::GetSensedValue( const Vector& q )
 {
     robot_.UpdateConfig(q);
 
@@ -268,17 +278,17 @@ Vector LinkTask::GetSensedValue( Vector q )
     Vector x;
     x.clear();
 
-    if( taskType_ == "po" )
+    if( taskType_ == po )
     {
         T.inplaceShift( localPosition_ ); // TODO check python
         PushFrameToVector( T, x );
 
     }
-    else if( taskType_ == "position" )
+    else if( taskType_ == position )
     {
         PushPosToVector( T*localPosition_, x );
     }
-    else if( taskType_ == "orientation" )
+    else if( taskType_ == orientation )
     {
         PushRotationToVector( T.R, x );
     }
@@ -289,30 +299,34 @@ Vector LinkTask::GetSensedValue( Vector q )
     return x;
 }
 
-Vector LinkTask::TaskDifference( Vector a, Vector b )
+Vector LinkTask::TaskDifference( const Vector& a, const Vector& b )
 {
-    if( taskType_ == "po" )
+    if( taskType_ == po )
     {
         Frame3D Ta;
         Frame3D Tb;
-        PopFrameFromVector( a, Ta );
-        PopFrameFromVector( a, Tb );
+        Vector atmp = a;
+        Vector btmp = b;
+        PopFrameFromVector( atmp, Ta ); // TODO change pile
+        PopFrameFromVector( btmp, Tb );
 
         Matrix3 Rbinv; Rbinv.setInverse( Tb.R );
         //Ta.R * Rbinv  + (a - b); // TODO add the moment comutation see python
         Vector x_buff;
         return x_buff;
     }
-    else if( taskType_ == "position" )
+    else if( taskType_ == position )
     {
         return (a - b);
     }
-    else if( taskType_ == "orientation" )
+    else if( taskType_ == orientation )
     {
         Matrix3 Ra;
         Matrix3 Rb;
-        PopRotationFromVector( a, Ra );
-        PopRotationFromVector( b, Rb );
+        Vector atmp = a;
+        Vector btmp = b;
+        PopRotationFromVector( atmp, Ra );
+        PopRotationFromVector( btmp, Rb );
         Vector x_buff; // TODO rotation see python
         return x_buff;
     }
@@ -324,21 +338,21 @@ Vector LinkTask::TaskDifference( Vector a, Vector b )
     }
 }
 
-Matrix LinkTask::GetJacobian( Config q )
+Matrix LinkTask::GetJacobian( const Config& q )
 {
     robot_.UpdateConfig(q);
 
     Matrix J; // Jacobian of the Link
 
-    if( taskType_ == "po" )
+    if( taskType_ == po )
     {
         robot_.GetFullJacobian( localPosition_, linkNo_, J );
     }
-    else if( taskType_ == "position" )
+    else if( taskType_ == position )
     {
         robot_.GetPositionJacobian( localPosition_, linkNo_, J );
     }
-    else if( taskType_ == "orientation" )
+    else if( taskType_ == orientation )
     {
         //robot_.GetOrientationJacobian( i, J ); TODO
     }
@@ -355,15 +369,15 @@ Matrix LinkTask::GetJacobian( Config q )
         Vector3 pb = Tbinv * ( robot_.links[linkNo_].T_World * localPosition_ );
         Matrix Jb;
 
-        if( taskType_ == "po" )
+        if( taskType_ == po )
         {
             robot_.GetFullJacobian( pb, baseLinkNo_, Jb );
         }
-        else if( taskType_ == "position" )
+        else if( taskType_ == position )
         {
             robot_.GetPositionJacobian( pb, baseLinkNo_, Jb );
         }
-        else if( taskType_ == "orientation" )
+        else if( taskType_ == orientation )
         {
             //robot_.links(baseLinkNo_).GetOrientationJacobian(Jb); TODO
         }
@@ -378,7 +392,7 @@ Matrix LinkTask::GetJacobian( Config q )
     return J;
 }
 
-void LinkTask::DrawGL(Vector q)
+void LinkTask::DrawGL( const Vector& q )
 {
     Vector x_buff = GetSensedValue(q);
 
@@ -389,7 +403,7 @@ void LinkTask::DrawGL(Vector q)
 
     const Frame3D& Tb = robot_.links[baseLinkNo_].T_World;
 
-    if( taskType_ == "position" )
+    if( taskType_ == position )
     {
         Vector3 x;
         Vector3 xdes;
@@ -406,7 +420,7 @@ void LinkTask::DrawGL(Vector q)
         // glColor3f(1,0.5,0);	//orange
         // glVertex3fv(x);
     }
-    else if( taskType_ == "po" )
+    else if( taskType_ == po )
     {
         Frame3D x;
         Frame3D xdes;
@@ -439,7 +453,7 @@ JointTask::JointTask( RobotDynamics3D& robot, const std::vector<int>& jointIndic
     // pass
 }
 
-Vector JointTask::GetSensedValue( Config q )
+Vector JointTask::GetSensedValue( const Config& q )
 {
     Vector x( jointIndices_.size() );
 
@@ -449,7 +463,7 @@ Vector JointTask::GetSensedValue( Config q )
     return x;
 }
 
-Matrix JointTask::GetJacobian( Config q )
+Matrix JointTask::GetJacobian( const Config& q )
 {
     Matrix J( jointIndices_.size(), q.size()  );
 
@@ -483,7 +497,7 @@ JointLimitTask::JointLimitTask( RobotDynamics3D& robot ) : OperationalSpaceTask(
     SetGains(-0.1,-2.0,0);
 }
 
-Vector JointLimitTask::GetSensedValue( Config q )
+Vector JointLimitTask::GetSensedValue( const Config& q )
 {
     Vector x( active_.size() );
 
@@ -493,7 +507,7 @@ Vector JointLimitTask::GetSensedValue( Config q )
     return x;
 }
 
-Matrix JointLimitTask::GetJacobian( Config q )
+Matrix JointLimitTask::GetJacobian( const Config& q )
 {
     Matrix J( active_.size(), q.size() );
 
@@ -509,7 +523,7 @@ Matrix JointLimitTask::GetJacobian( Config q )
     return J;
 }
 
-void JointLimitTask::UpdateState( Config q, Vector dq, double dt )
+void JointLimitTask::UpdateState(  const Config& q, const Vector&  dq, double dt )
 {
     active_.clear();
     weight_.clear();

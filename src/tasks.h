@@ -6,12 +6,12 @@
 /*!
 A base class for an operational space task. x=f(q)
 Subclasses should override getters for sensed x, sensed error
-(optional), sensed dx (optional), and appropriate calculation
-of Jacobian.
+(optional), sensed dx (optional), and appropriate calculation of Jacobian.
+
 Subclasses inherits setters for xdes, dxdes, gains, priority level,
 weight, and task name.
-If the task space is non-cartesian, the taskDifference method should
-be overridden.
+
+If the task space is non-cartesian, the taskDifference method should be overridden.
 */
 namespace op_space_control
 {
@@ -27,13 +27,13 @@ public:
     }
 
     //! User calls this to set task state xdes
-    void SetDesiredValue( Vector xdes )
+    void SetDesiredValue( const Vector& xdes )
     {
         xdes_ = xdes;
     }
 
     //! User calls this to set task state xdes
-    void SetDesiredVelocity( Vector dxdes )
+    void SetDesiredVelocity( const Vector& dxdes )
     {
         dxdes_ = dxdes;
     }
@@ -46,10 +46,10 @@ public:
         hI = hI_;
     }
 
-    //! User calls this to get priority level. A smaller value means more important
+    //! User calls this to get priority level, a smaller value means more important
     double GetPriority() { return level_; }
 
-    //! User calls this to set priority level. A smaller value means more important
+    //! User calls this to set priority level, a smaller value means more important
     void SetPriority( int level=1 )
     {
         level_ = level;
@@ -82,31 +82,31 @@ public:
 
     //! Called at beginning of new timestep.
     //! Optionally does something before computing stuff in getCommandVelocity/advance. e.g., compute cached values
-    void UpdateState( Config q, Vector dq, double dt ) { }
+    void UpdateState( const Config& q, const Vector&  dq, double dt ) { }
 
     //! Get Command Velocity
-    Vector GetCommandVelocity( Config q, Vector dq, double dt );
+    Vector GetCommandVelocity( const Config& q, const Vector&  dq, double dt );
 
     //! Updates internal state: accumulates iterm and updates x_last
-    void Advance( Config q, Vector dq, double dt );
+    void Advance( const Config& q, const Vector&  dq, double dt );
 
     //! Gets task x from sensed configuration q
-    virtual Vector GetSensedValue( Vector dq ) = 0;
+    virtual Vector GetSensedValue( const Vector& dq ) = 0;
 
     //! Gets Jacobian dx/dq(q)
-    virtual Matrix GetJacobian( Config q ) = 0;
+    virtual Matrix GetJacobian( const Config& q ) = 0;
 
     //! Returns x(q)-xdes where - is the task-space differencing operator
-    Vector GetSensedError( Config q );
+    Vector GetSensedError( const Config& q );
 
     //! Default: assumes a Cartesian space
-    Vector TaskDifference( Vector a, Vector b );
+    Vector TaskDifference( const Vector& a, const Vector& b );
 
     //! Gets task velocity from sensed configuration q.
-    Vector GetSensedVelocity( Vector q, Vector dq, double dt );
+    Vector GetSensedVelocity( const Config& q, const Vector&  dq, double dt );
 
     //! Optionally can be overridden to visualize the task in OpenGL.
-    virtual void DrawGL(Vector q) { }
+    virtual void DrawGL(const Vector& q) { }
 
 protected:
     int level_;
@@ -133,13 +133,13 @@ public:
     double GetMass();
 
     //! Returns CoM position
-    Vector GetSensedValue( Config q );
+    Vector GetSensedValue( const Config& q );
 
     //! Returns axis-weighted CoM Jacobian by averaging
-    Matrix GetJacobian( Config q );
+    Matrix GetJacobian( const Config& q );
 
     //! Draws useful sanity check of the task
-    void DrawGL( Config q );
+    void DrawGL( const Config& q );
 
 private:
     RobotDynamics3D& robot_;
@@ -150,27 +150,25 @@ private:
 
 //! Link position/orientation task subclass.
 //! Supports both absolute and relative positioning.
+//! taskType should be :
 class LinkTask : public OperationalSpaceTask
 {
 public:
     LinkTask( RobotDynamics3D& robot, int linkNo, std::string taskType, int baseLinkNo = -1  );
     void SetBaseLinkNo(int baseLinkNo) { baseLinkNo_ = baseLinkNo; }
     void SetLocalPosition(Vector3 p) { localPosition_ = p; }
-    Vector GetSensedValue( Config q );
-    Vector TaskDifference( Vector a, Vector b);
-    Matrix GetJacobian( Config q );
-    void DrawGL( Vector q );
+    Vector GetSensedValue( const Config& q );
+    Vector TaskDifference( const Vector& a, const Vector& b);
+    Matrix GetJacobian( const Config& q );
+    void DrawGL( const Vector& q );
 
 private:
-
+    void SetTaskType( std::string taskType );
+    enum TaskType { position, orientation, po } taskType_;
     int linkNo_;
     int baseLinkNo_;
     RobotDynamics3D& robot_;
-    //    self.hP = -1
-    //    self.hD = 0
-    //    self.hI = 0
     Vector3 localPosition_;
-    std::string taskType_;
     std::string name_;
 };
 
@@ -180,8 +178,8 @@ class JointTask : public OperationalSpaceTask
 public:
     JointTask( RobotDynamics3D& robot, const std::vector<int>& jointIndices );
 
-    Vector GetSensedValue( Config q );
-    Matrix GetJacobian( Config q );
+    Vector GetSensedValue( const Config& q );
+    Matrix GetJacobian( const Config& q );
 
 private:
     RobotDynamics3D& robot_;
@@ -198,10 +196,10 @@ class JointLimitTask : public OperationalSpaceTask
 public:
     JointLimitTask(  RobotDynamics3D& robot );
 
-    void UpdateState( Config q, Vector dq, double dt );
+    void UpdateState( const Config& q, const Vector& dq, double dt );
 
-    Vector GetSensedValue( Config q );
-    Matrix GetJacobian( Config q );
+    Vector GetSensedValue( const Config& q );
+    Matrix GetJacobian( const Config& q );
 
 private:
     RobotDynamics3D& robot_;
