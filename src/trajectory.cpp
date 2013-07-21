@@ -33,7 +33,7 @@ bool Trajectory::parse_robotsim( std::string file )
         return false;
     }
     in.close();
-
+    compute_length();
     return true;
 }
 

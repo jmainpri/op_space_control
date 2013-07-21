@@ -74,7 +74,7 @@ void TrajFollowing::CreateTasks(Config q_init)
     handTask->SetDesiredVelocity( Vector(3,0.0) );
     handTask->SetGains(-10,-0.1,-1);
     handTask->SetPriority(2);
-    handTask->SetWeight(1);
+    handTask->SetWeight(Vector(1,1.0));
 
     // joint task
     cout << "Create joint task" << endl;
@@ -153,14 +153,25 @@ Config TrajFollowing::GetSensedConfig(double time)
     return q + q_noise;
 }
 
+double TrajFollowing::GetRealTime()
+{
+    timeval tim;
+    gettimeofday(&tim, NULL);
+    return tim.tv_sec+(tim.tv_usec/1000000.0);
+}
+
 void TrajFollowing::Run()
 {
+    cout << "Start trajectory following" << endl;
     double time = 0.0;
-    while(traj_.length_ > time )
+
+    while( traj_.length_ > time )
     {
         cout<< "Time t=" << time << endl;
 
-        Config q = GetSensedConfig(time);
+        double chrono_start = GetRealTime();
+
+        Config q = GetSensedConfig( time );
 
         Vector dq;
         if(q_last_.empty())
@@ -171,7 +182,9 @@ void TrajFollowing::Run()
         q_last_ = q;
 
         // Gets solution in operational space
-        Trigger(q, dq, dt_, time);
+        Trigger( q, dq, dt_, time );
+
+        cout << GetRealTime() - chrono_start << " sec" << endl;
         // Vector qdes, dqdes;
         // opController_->SetPIDCommand( qdes, dqdes );
 

@@ -18,6 +18,7 @@ public:
     void Run();
 
 private:
+    double GetRealTime();
     void Trigger(Config q, Vector dq, double dt, double time_cur);
     Config GetSensedConfig(double time);
 

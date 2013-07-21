@@ -58,7 +58,7 @@ void OperationalSpaceTask::Advance( const Config& q, const Vector&  dq, double d
         Vector eP = GetSensedError( q );
 
         // update iterm
-        if( eI_.size() != 0 )
+        if( eI_.empty() )
         {
             eI_ = eP * dt;
         }
@@ -159,7 +159,7 @@ Matrix COMTask::GetJacobian( const Config& q )
     robot_.UpdateConfig(q);
 
     int numLinks = robot_.links.size();
-    Matrix Jcom( numLinks, 3, 0.0 );
+    Matrix Jcom( 3, numLinks, 0.0 );
     for ( int i=0; i<numLinks; i++ )
     {
         Matrix Ji; // Position jacobian of ith link com, (3,q.n)(rows,cols)

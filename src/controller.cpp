@@ -138,6 +138,8 @@ Matrix OperationalSpaceController::GetStackedJacobian( const Config& q, const Ve
     {
         if( taskList_[i]->GetWeight().empty() )
             continue;
+        if( taskList_[i]->GetWeight()[0] == 0.0 )
+            continue;
 
         if( taskList_[i]->GetPriority() == priority )
         {
@@ -160,7 +162,7 @@ Matrix OperationalSpaceController::GetStackedJacobian( const Config& q, const Ve
             else
             {
                 Vector row;
-                // treat as an elementwise weight
+                // treat as an el``ementwise weight
                 for( int j=0;j< int(Jtemp.numRows()); j++ )
                 {
                     Jtemp.getRowRef( j, row );
@@ -171,7 +173,7 @@ Matrix OperationalSpaceController::GetStackedJacobian( const Config& q, const Ve
             if( J.numRows() == 0 && J.numCols() == 0 )
                 J = Jtemp;
             else
-                J = VStack( J, Jtemp ); // TODO
+                J = VStack( J, Jtemp );
         }
     }
     return J;
@@ -193,9 +195,12 @@ Vector OperationalSpaceController::GetStackedVelocity( const Config& q, const Ve
             Vector Vtemp = taskList_[i]->GetCommandVelocity( q, dq, dt_) * taskList_[i]->GetWeight()[0]; // TODO why size 0???
 
             if( V.empty() )
+            {
                 V = Vtemp;
-            else
+            }
+            else{
                 V = HStack( V, Vtemp );
+            }
         }
     }
     return V;
@@ -234,16 +239,16 @@ Vector OperationalSpaceController::Solve( const Config& q, const Vector& dq, dou
 
     // priority 2
     Matrix eye(dq1.size(),dq1.size()); eye.setIdentity();
-    Matrix Np; J1inv.mul( J1, Np );
+    Matrix Np(dq1.size(),dq1.size()); Np.mul( J1inv, J1 );
     Matrix N; N.sub( eye, Np );
-    Matrix Jtask = GetStackedJacobian(q,dq,2);
+    Matrix Jtask = GetStackedJacobian( q, dq, 2 );
 
     Vector dqtask;
 
-    if ( Jtask.numCols() != 0 && Jtask.numRows() )
+    if ( Jtask.numCols() != 0 && Jtask.numRows() !=0  )
     {
-        Vector Vtask = GetStackedVelocity(q,dq,2);
-        Matrix JtaskN; Jtask.mul(Jtask,N);
+        Vector Vtask = GetStackedVelocity( q, dq, 2 );
+        Matrix JtaskN; JtaskN.mul( Jtask, N );
         //assert np.isfinite(Jtask).all(); TODO
         Vector Jtasktmp; Jtask.mul( dq1, Jtasktmp );
         Vector Vtask_m_resid; Vtask_m_resid.sub( Vtask , Jtasktmp );
@@ -253,28 +258,28 @@ Vector OperationalSpaceController::Solve( const Config& q, const Vector& dq, dou
             Matrix JtaskNinv;
             Math::SVDecomposition<double> svd(JtaskN);
             svd.getInverse( JtaskNinv );
-            JtaskNinv.mul(Vtask_m_resid,z);
-            //JtaskNinv = np.linalg.pinv(JtaskN, rcond=1e-3);
-            //z = JtaskNinv.dot(Vtask_m_resid);
+            JtaskNinv.mul( Vtask_m_resid, z );
         }
         catch(...)
         {
             //except np.linalg.LinAlgError:
             // print "SVD failed, trying lstsq"
             //z = np.linalg.lstsq(Jtask,Vtask_m_resid,rcond=1e-3)[0];
-            //dqtask = np.dot(N, z)
         }
+        N.mul( z, dqtask );
     }
     else
     {
-        // dqtask = [0.0]*len(dq1); TODO
+        dqtask = Vector(dq1.size(),0.0);
     }
 
     // compose the velocities together
-    dqdes_.add( dq1, dqtask );
+    dqdes_ = dq1 + dqtask;
     CheckMax(1);
 
-    qdes_.madd( q, dt_); // TODO Check
+    Config q_tmp(q);
+    q_tmp.madd( dqdes_, dt_ );
+    qdes_ = q_tmp;
 
     //return (dqdes_, qdes_); // TODO stack them
     return dqdes_;
@@ -284,6 +289,6 @@ void OperationalSpaceController::Advance( const Config& q, const Vector& dq, dou
 {
     for( int i=0; i<int(taskList_.size()); i++ )
     {
-        taskList_[i]->Advance(q,dq,dt);
+        taskList_[i]->Advance( q, dq ,dt );
     }
 }

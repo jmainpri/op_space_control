@@ -82,13 +82,13 @@ public:
 
     //! Called at beginning of new timestep.
     //! Optionally does something before computing stuff in getCommandVelocity/advance. e.g., compute cached values
-    void UpdateState( const Config& q, const Vector&  dq, double dt ) { }
+    virtual void UpdateState( const Config& q, const Vector&  dq, double dt ) { }
 
     //! Get Command Velocity
-    Vector GetCommandVelocity( const Config& q, const Vector&  dq, double dt );
+    virtual Vector GetCommandVelocity( const Config& q, const Vector&  dq, double dt );
 
     //! Updates internal state: accumulates iterm and updates x_last
-    void Advance( const Config& q, const Vector&  dq, double dt );
+    virtual void Advance( const Config& q, const Vector&  dq, double dt );
 
     //! Gets task x from sensed configuration q
     virtual Vector GetSensedValue( const Vector& dq ) = 0;
@@ -97,13 +97,13 @@ public:
     virtual Matrix GetJacobian( const Config& q ) = 0;
 
     //! Returns x(q)-xdes where - is the task-space differencing operator
-    Vector GetSensedError( const Config& q );
+    virtual Vector GetSensedError( const Config& q );
 
     //! Default: assumes a Cartesian space
-    Vector TaskDifference( const Vector& a, const Vector& b );
+    virtual Vector TaskDifference( const Vector& a, const Vector& b );
 
     //! Gets task velocity from sensed configuration q.
-    Vector GetSensedVelocity( const Config& q, const Vector&  dq, double dt );
+    virtual Vector GetSensedVelocity( const Config& q, const Vector&  dq, double dt );
 
     //! Optionally can be overridden to visualize the task in OpenGL.
     virtual void DrawGL(const Vector& q) { }
