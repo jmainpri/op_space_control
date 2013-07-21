@@ -105,7 +105,7 @@ void OperationalSpaceController::PrintStatus(const Config& q)
     int colwidth = 10;
     for( int p=0;p< int(priorities.size()); p++ )
     {
-        cout << "Priority" << p << "weighted error^2" << totalerrors[p] << endl;
+        //cout << "Priority" << p << "weighted error^2" << totalerrors[p] << endl;
         std::vector<std::string> pnames = names[p];
         std::vector<std::string> perrs = errors[p];
         int start = 0;

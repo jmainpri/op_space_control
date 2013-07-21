@@ -11,14 +11,24 @@ class Trajectory
 public:
     Trajectory();
 
+    //! Parse a trajectory in the robot sim format
     bool parse_robotsim(std::string file);
 
+    //! Compute the total length of the trajectory
     void compute_length();
-    Math::Vector eval(double t);
-    Math::Vector interpolate(const Math::Vector& a, const Math::Vector& b, double u);
 
+    //! Evaluate the configuration at time t
+    Math::Vector eval(double t);
+
+    //! Configuration along the trajectory
     std::vector< std::pair<double,Math::Vector> > milestones_;
+
+    //! Total of the trajectory
     double length_;
+
+private:
+    //! interpolate linearly between two configuration
+    Math::Vector interpolate(const Math::Vector& a, const Math::Vector& b, double u);
 };
 }
 

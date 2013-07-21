@@ -117,6 +117,7 @@ void TrajFollowing::LoadTrajectory()
         cout << "trajectory loaded" << endl;
         cout << " num config : " << traj_.milestones_.size() << endl;
         cout << " dofs : " << traj_.milestones_[0].second.size() << endl;
+        cout << " length : " << traj_.length_ << endl;
     }
     else{
         cout << "error loading trajectory" << endl;
@@ -145,12 +146,17 @@ void TrajFollowing::Trigger(Config q, Vector dq, double dt, double time_cur)
 Config TrajFollowing::GetSensedConfig(double time)
 {
     Config q = traj_.eval( time );
-    Vector q_max( q.n, 0.05 );
-    Vector q_min( q.n, -0.05 );
+    Vector q_max( q.n, 0.01 );
+    Vector q_min( q.n, -0.01 );
     Statistics::BoxProbabilityDistribution dist(q_max,q_min);
     Config q_noise;
     dist.Sample(q_noise);
-    return q + q_noise;
+
+    // Generate noise only one upper body joints
+    Config q_tmp = q + q_noise;
+    for(int i=0;i<6;i++)
+        q_tmp[i] = q[i];
+    return q_tmp;
 }
 
 double TrajFollowing::GetRealTime()
@@ -189,7 +195,7 @@ void TrajFollowing::Run()
         // opController_->SetPIDCommand( qdes, dqdes );
 
         // Print status
-        // opController->.printStatus(q)
+        opController_->PrintStatus(q);
         time += dt_;
     }
 }

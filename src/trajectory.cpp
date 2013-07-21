@@ -39,26 +39,22 @@ bool Trajectory::parse_robotsim( std::string file )
 
 void Trajectory::compute_length()
 {
-    length_ = 0.0;
-    for(int i=0;i<int(milestones_.size());i++)
-    {
-        length_ += milestones_[i].first;
-    }
+    length_ = milestones_.back().first;
 }
 
 //! Evaluates the trajectory using piecewise linear
 //! interpolation
 Math::Vector Trajectory::eval(double t)
 {
-    if(milestones_.empty())
+    if(milestones_.empty()) {
         cout << "Empty trajectory" << endl;
+        return Math::Vector(1,0.0);
+    }
     if(milestones_.size() == 1)
         return milestones_[0].second;
+
     if( t > milestones_.back().first )
     {
-        // if endBehavior == 'loop':
-        //    t = t % self.times[-1]
-        //  else:
         return milestones_.back().second;
     }
     int i=0;
@@ -72,19 +68,13 @@ Math::Vector Trajectory::eval(double t)
 
     if( i==0 )
     {
-        //if endBehavior == 'loop':
-        //    t = t + self.times[-1]
-        //    p = -2
-        //    u=(t-self.times[p])/(self.times[-1]-self.times[p])
-        //else:
         return milestones_[0].second;
     }
 
-    //int i = bisect.bisect_left(milestones_,t);
     int p=i-1;
     double u=(t-milestones_[p].first)/(milestones_[i].first-milestones_[p].first);
 
-    //assert u >= 0 and u <= 1
+    //assert u >= 0 and u <= 1 // TODO
     //linear interpolate between milestones[p] and milestones[i]
     return interpolate( milestones_[p].second, milestones_[i].second, u );
 }
