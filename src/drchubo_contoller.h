@@ -3,6 +3,8 @@
 
 #include "controller.h"
 
+namespace op_space_control
+{
 class DRCHubo_contoller
 {
 public:
@@ -13,5 +15,6 @@ public:
 private:
     OperationalSpaceController* conroller_;
 };
+}
 
 #endif // DRCHUBO_CONTOLLER_H

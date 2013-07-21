@@ -92,7 +92,7 @@ Vector OperationalSpaceTask::GetSensedVelocity( const Config& q, const Vector&  
     // uncomment this to get a jacobian based technique
     // return np.dot(_getJacobian(q),dq)
 
-    if( qLast_.size() > 0 )
+    if( qLast_.empty() )
     {
         return Vector();
     }
