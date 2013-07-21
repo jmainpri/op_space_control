@@ -24,37 +24,37 @@ public:
     //! Finds a named task.
     //! Users need to assure no duplicated task names
     //! in the task list manually.
-    OperationalSpaceTask* GetTaskByName( std::string taskName );
+    OperationalSpaceTask* GetTaskByName( const std::string &taskName ) const;
 
     //! Sets all the tasks' desired values from a given desired
     //! configuration (e.g., to follow a reference trajectory)
     //! If the 'tasks' variable is provided, it should be a list of
     //! tasks for which the desired values should be set.
-    void SetDesiredValuesFromConfig( Config qdes );
-    void SetDesiredValuesFromConfig( Config qdes, const std::vector<OperationalSpaceTask*>& tasks );
+    void SetDesiredValuesFromConfig( const Config& qdes );
+    void SetDesiredValuesFromConfig( const Config& qdes, const std::vector<OperationalSpaceTask*>& tasks );
 
     //! Sets all the tasks' desired velocities from a given pair
     //! of configurations separated by dt (e.g., to follow a reference trajectory)
-    void SetDesiredVelocityFromDifference( Config qdes0, Config qdes1, double dt );
-    void SetDesiredVelocityFromDifference( Config qdes0, Config qdes1, double dt, const std::vector<OperationalSpaceTask*>& tasks);
+    void SetDesiredVelocityFromDifference( const Config& qdes0, const Config& qdes1, double dt );
+    void SetDesiredVelocityFromDifference( const Config& qdes0, const Config& qdes1, double dt, const std::vector<OperationalSpaceTask*>& tasks);
 
-    void PrintStatus(Config q);
+    void PrintStatus( const Config& q);
 
     //! Formulates J to calculate dqdes
-    Matrix GetStackedJacobian( Config q, Vector dq, int priority );
+    Matrix GetStackedJacobian( const Config& q, const Vector& dq, int priority );
 
     //! Formulates dx to calculate dqdes
-    Vector GetStackedVelocity( Config q, Vector dq, int priority );
+    Vector GetStackedVelocity( const Config& q, const Vector& dq, int priority );
 
     //! Check dqdes against joint velocity limits.
     void CheckMax(double limit);
 
     //! Takes sensed q,dq, timestep dt and returns dqdes and qdes
     //! in joint space
-    Vector Solve( Config q, Vector dq, double dt );
+    Vector Solve( const Config& q, const Vector& dq, double dt );
 
     //! Updates all tasks states
-    void Advance( Config q, Vector dq, double dt );
+    void Advance( const Config& q, const Vector& dq, double dt );
 
 private:
     std::vector<OperationalSpaceTask*> taskList_;

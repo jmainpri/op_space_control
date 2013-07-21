@@ -4,26 +4,29 @@
 
 #include <cmath>
 
+using std::cout;
+using std::endl;
+
 //--------------------------------------------------------------------
 //--------------------------------------------------------------------
 //--------------------------------------------------------------------
 //--------------------------------------------------------------------
 
-std::vector<int> GetStdVector(int value)
+std::vector<int> op_space_control::GetStdVector(int value)
 {
     std::vector<int> vect;
     vect.push_back(value);
     return vect;
 }
 
-std::vector<double> GetStdVector(double value)
+std::vector<double> op_space_control::GetStdVector(double value)
 {
     std::vector<double> vect;
     vect.push_back(value);
     return vect;
 }
 
-std::vector<double> GetStdVector(const Vector3& pos)
+std::vector<double> op_space_control::GetStdVector(const Vector3& pos)
 {
     std::vector<double> vect(3);
     vect[0] = pos[0];
@@ -32,7 +35,7 @@ std::vector<double> GetStdVector(const Vector3& pos)
     return vect;
 }
 
-Vector3 GetVector3(const Vector& vect)
+Vector3 op_space_control::GetVector3(const Vector& vect)
 {
     Vector3 pos;
     pos[0] = vect[0];
@@ -41,7 +44,7 @@ Vector3 GetVector3(const Vector& vect)
     return pos;
 }
 
-float* GetGlVector3(const Math3D::Vector3& pos)
+float* op_space_control::GetGlVector3(const Math3D::Vector3& pos)
 {
     float* vect = new float[3];
     vect[0] = pos[0];
@@ -50,7 +53,7 @@ float* GetGlVector3(const Math3D::Vector3& pos)
     return vect;
 }
 
-Vector GetVector(const Math3D::Vector3& pos)
+Vector op_space_control::GetVector(const Math3D::Vector3& pos)
 {
     Vector vect(3);
     vect[0] = pos[0];
@@ -59,7 +62,7 @@ Vector GetVector(const Math3D::Vector3& pos)
     return vect;
 }
 
-void PushRotationToVector( const Matrix3& R, Vector& x )
+void op_space_control::PushRotationToVector( const Matrix3& R, Vector& x )
 {
     int size = x.size();
     Vector x_temp = x;
@@ -73,7 +76,7 @@ void PushRotationToVector( const Matrix3& R, Vector& x )
     x[size+6] = R(2,0); x[size+7] = R(2,1); x[size+8] = R(2,2);
 }
 
-void PopRotationFromVector( Vector& x, Matrix3& R )
+void op_space_control::PopRotationFromVector( Vector& x, Matrix3& R )
 {
     int size = x.size();
     R(0,0) = x[size-9]; R(0,1) = x[size-8]; R(0,2) = x[size-7];
@@ -87,7 +90,7 @@ void PopRotationFromVector( Vector& x, Matrix3& R )
         x[i] = x_temp[i];
 }
 
-void PushPosToVector( const Vector3& p, Vector& x )
+void op_space_control::PushPosToVector( const Vector3& p, Vector& x )
 {
     int size = x.size();
     Vector x_temp = x;
@@ -101,7 +104,7 @@ void PushPosToVector( const Vector3& p, Vector& x )
     x[size+2] = p[2];
 }
 
-void PopPosFromVector( Vector& x, Vector3& p )
+void op_space_control::PopPosFromVector( Vector& x, Vector3& p )
 {
     int size = x.size();
     p[0]   = x[size-3];
@@ -115,24 +118,29 @@ void PopPosFromVector( Vector& x, Vector3& p )
         x[i] = x_temp[i];
 }
 
-void PushFrameToVector( const Frame3D& T, Vector& x )
+void op_space_control::PushFrameToVector( const Frame3D& T, Vector& x )
 {
-    PushRotationToVector( T.R, x );
-    PushPosToVector( T.t, x );
+    op_space_control::PushRotationToVector( T.R, x );
+    op_space_control::PushPosToVector( T.t, x );
 }
 
-void PopFrameFromVector( Vector& x, Frame3D& T )
+void op_space_control::PopFrameFromVector( Vector& x, Frame3D& T )
 {
-    PopPosFromVector( x, T.t );
-    PopRotationFromVector( x, T.R );
+    op_space_control::PopPosFromVector( x, T.t );
+    op_space_control::PopRotationFromVector( x, T.R );
 }
 
-Vector GetPushedFrame( const Frame3D& T )
+Vector op_space_control::GetPushedFrame( const Frame3D& T )
 {
     Vector vect;
-    PushFrameToVector(T,vect);
+    op_space_control::PushFrameToVector(T,vect);
     return vect;
 }
+
+//--------------------------------------------------------------------
+//--------------------------------------------------------------------
+//--------------------------------------------------------------------
+//--------------------------------------------------------------------
 
 // used in python interface
 Matrix GetJacobian( RobotDynamics3D& robot, int index, Vector3 p )
@@ -159,6 +167,11 @@ Matrix GetOrientationJacobian( RobotDynamics3D& robot, int index )
     //robot.GetOrientationJacobian(index,Jmat);
     return Jmat;
 }
+
+//--------------------------------------------------------------------
+//--------------------------------------------------------------------
+//--------------------------------------------------------------------
+//--------------------------------------------------------------------
 
 double angle(const Matrix3& R)
 {
@@ -237,9 +250,53 @@ Vector3 Moment(const Matrix3& R)
     return Vector3(x,y,z);
 }
 
-Vector3 Error(const Matrix3& R1, const Matrix3& R2)
+Vector3 op_space_control::Error( const Matrix3& R1, const Matrix3& R2 )
 {
     Matrix3 R2inv;
     R2inv.setInverse( R2 );
     return Moment( R1 * R2inv );
+}
+
+//--------------------------------------------------------------------
+//--------------------------------------------------------------------
+//--------------------------------------------------------------------
+//--------------------------------------------------------------------
+
+Matrix op_space_control::VStack( const Matrix& mat1, const Matrix& mat2 )
+{
+    if( mat1.numCols() != mat2.numCols()) {
+        cout << "Error in Vstack" << endl;
+        return Matrix();
+    }
+
+    std::vector<Vector> mattmp;
+
+    for(int i=0;i<mat1.numRows();i++)
+        mattmp.push_back( mat1.row(i) );
+
+    for(int i=0;i<mat2.numRows();i++)
+        mattmp.push_back( mat1.row(i) );
+
+    Matrix out( mattmp.size(), mat1.numCols() );
+    for(int i=0;i<int(mattmp.size());i++)
+    {
+        Vector row;
+        out.getRowRef( i, row );
+        row = mattmp[i];
+    }
+
+    return out;
+}
+
+Vector op_space_control::HStack(const Vector& vec1, const Vector& vec2 )
+{
+    Vector out( vec1.size() + vec2.size() );
+
+    for(int i=0;i<vec1.size();i++)
+        out[i] = vec1[i];
+
+    for(int i=vec1.size();i<(vec1.size()+vec2.size());i++)
+        out[i] = vec2[i];
+
+    return out;
 }

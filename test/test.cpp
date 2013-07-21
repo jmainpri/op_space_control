@@ -101,14 +101,23 @@ void create_tasks( Robot& robot, Config q_init )
     delete opController;
 }
 
+void print_link_names(const Robot& robot)
+{
+    for(int i=0;i<int(robot.links.size());i++)
+    {
+        cout << robot.LinkName(i) << " : " << robot.linkNames[i] << endl;
+    }
+}
+
 int main(int argc, char** argv)
 {
     Robot robot;
     robot.load_urdf("/home/jmainpri/workspace/ros_workspace/src/drchubo/drchubo-v2/robots/drchubo-v2.urdf");
-    //robot.load_urdf("/home/jmainpri/workspace/ros_workspace/src/drchubo/drchubo-v1/robots/drchubo-v1.urdf");
 
     cout << "Number of links : " << robot.links.size() << endl;
     cout << "robot.q.n : " << robot.q.n << endl;
 
+    // Uncomment to print joint mapping
+    //print_link_names(robot);
     create_tasks( robot, robot.q );
 }
