@@ -68,10 +68,7 @@ target_link_libraries( test ${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/libraries/Kris
 #    add_dependencies(check ${test_base})
 #endforeach(utest_src_file)
 
-#install(FILES   include/Robot.h
-#                include/Frame.h
-#                include/Linkage.h
-#                include/urdf_parsing.h
-#        DESTINATION ${CMAKE_INSTALL_PREFIX}/include/RobotKin)
+file( GLOB headers "src/*.h" )
 
-#install(TARGETS ${PROJECT_NAME} DESTINATION ${LIBRARY_INSTALL_PATH})
+install(FILES   ${headers} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/OpSpaceController)
+install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
