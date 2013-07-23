@@ -64,13 +64,13 @@ struct RobotJoint
 };
 
 //! Loads a robot from a urdf file
-class Robot : public RobotDynamics3D
+class UrdfRobotParser : public RobotDynamics3D
 {
 public:
-    Robot() : RobotDynamics3D() { }
+    UrdfRobotParser() : RobotDynamics3D() { }
 
     // Main function of the urdf parser
-    bool load_urdf( std::string filename );
+    bool LoadUrdf( std::string filename );
 
     // Index link names
     std::vector<std::string> linkNames;

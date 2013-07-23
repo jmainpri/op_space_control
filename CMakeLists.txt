@@ -20,6 +20,7 @@ ENDIF(NOT CMAKE_BUILD_TYPE)
 # TODO fix use only one library
 #include_directories( ${PROJECT_SOURCE_DIR}/libraries/KrisLibrary )
 include_directories( /home/jmainpri/workspace/RobotSim/Library/KrisLibrary )
+include_directories( /home/jmainpri/workspace/RobotSim )
 
 # Check if the user is set up to parse URDFs
 find_package( urdfdom QUIET )
@@ -32,9 +33,10 @@ if( urdfdom_FOUND )
    find_package( urdfdom_headers REQUIRED )
    include_directories( ${urdfdom_headers_INCLUDE_DIRS} )
 
-   find_package( Boost REQUIRED COMPONENTS system filesystem thread )
-   include_directories( ${BOOST_INCLUDE_DIRS} )
-   link_libraries( ${BOOST_LIBRARIES} )
+# Remove when compiling with robot sim
+#   find_package( Boost REQUIRED COMPONENTS system filesystem thread )
+#   include_directories( ${BOOST_INCLUDE_DIRS} )
+#   link_libraries( ${BOOST_LIBRARIES} )
 
 else( urdfdom_FOUND )
    message(STATUS "Could NOT find urdfdom -- We will NOT compile a URDF parser")
@@ -47,18 +49,32 @@ endif( urdfdom_FOUND )
 file( GLOB lib_source "src/*.cpp" "src/*.h" )   
 list( SORT lib_source )
 
+#set( robot_sim_libs
+#/home/jmainpri/workspace/RobotSim/Library/KrisLibrary/lib/libKrisLibrary.a)
+
+find_package( OpenGL REQUIRED )
+link_libraries( ${OPENGL_LIBRARIES} )
+
+set( robot_sim_libs
+/home/jmainpri/workspace/RobotSim/lib/libRobotSim.a
+/home/jmainpri/workspace/RobotSim/Library/glui-2.36/src/lib/libglui.a
+/home/jmainpri/workspace/RobotSim/Library/KrisLibrary/lib/libKrisLibrary.a
+/home/jmainpri/workspace/RobotSim/Library/ode-0.11.1/ode/src/.libs/libode.so
+/home/jmainpri/workspace/RobotSim/Library/tinyxml/libtinyxml.a
+/home/jmainpri/workspace/devel/lib/libassimp.so )
+
 # Define target
-add_library( ${PROJECT_NAME} SHARED ${lib_source} )
-#add_library( ${PROJECT_NAME} STATIC ${lib_source} )
+add_library( ${PROJECT_NAME} SHARED ${lib_source} ${robot_sim_libs} )
 
 file( GLOB unit_tests_source "test/*.cpp" )
 list( SORT unit_tests_source )
+
 
 include_directories( src )
 add_executable( test ${unit_tests_source} )
 # TODO fix use only one library
 #target_link_libraries( test ${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/libraries/KrisLibrary/lib/libKrisLibrary.a )
-target_link_libraries( test ${PROJECT_NAME} /home/jmainpri/workspace/RobotSim/Library/KrisLibrary/lib/libKrisLibrary.a )
+target_link_libraries( test ${PROJECT_NAME} ${robot_sim_libs} )
 
 #enable_testing()
 #message(STATUS "\n-- UNIT TEST: ")

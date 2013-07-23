@@ -193,7 +193,6 @@ Matrix COMTask::GetJacobian( const Config& q )
             row = Jcom.row(j) - Jb.row(j);
         }
     }
-
     return Jcom;
 }
 
@@ -524,7 +523,6 @@ Matrix JointLimitTask::GetJacobian( const Config& q )
         J.getRowRef( i, row );
         row = Ji; // TODO check that it's rows or coll ??
     }
-
     return J;
 }
 

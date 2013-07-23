@@ -10,7 +10,7 @@ using namespace op_space_control;
 using std::cout;
 using std::endl;
 
-TrajFollowing::TrajFollowing(Robot& robot) : robot_(robot)
+TrajFollowing::TrajFollowing(RobotDynamics3D& robot) : robot_( robot )
 {
     dt_ = 0.005;
 }
@@ -23,26 +23,26 @@ TrajFollowing::~TrajFollowing()
 
 void TrajFollowing::CreateTasks(Config q_init)
 {
-    int right_foot_id = 59; // RAR, robotsim -> 62
-    int left_foot_id = 52; // LAR, robotsim -> 56
-    int hand_id = 11; // LWP, robotsim -> 13
+    int right_foot_id = 59;  // RAR, robotsim -> 62
+    int left_foot_id = 52;   // LAR, robotsim -> 56
+    int hand_id = 11;        // LWP, robotsim -> 13
 
     // priority 1
     // right foot task
-    cout << "Create left foot task" << endl;
-    LinkTask* RFTask = new LinkTask( robot_, left_foot_id, "po" ); // LAR
+    cout << "Create right foot task" << endl;
+    LinkTask* RFTask = new LinkTask( robot_, right_foot_id, "po" ); // RAR
     RFTask->SetPriority(1);
     RFTask->SetName("LF");
-    RFTask->SetDesiredValue( GetPushedFrame( robot_.links[left_foot_id].T_World ) );
+    RFTask->SetDesiredValue( GetPushedFrame( robot_ .links[right_foot_id].T_World ) );
     RFTask->SetDesiredVelocity( Vector(6,0.0) );
     RFTask->SetGains(0,0,0);
 
     // the same with left foot
-    cout << "Create right foot task" << endl;
-    LinkTask* LFTask = new LinkTask( robot_, right_foot_id, "po"); // RAR
+    cout << "Create left foot task" << endl;
+    LinkTask* LFTask = new LinkTask( robot_, left_foot_id, "po"); // LAR
     LFTask->SetPriority(1);
     LFTask->SetName("RF");
-    LFTask->SetDesiredValue( GetPushedFrame( robot_.links[right_foot_id].T_World ) );
+    LFTask->SetDesiredValue( GetPushedFrame( robot_.links[left_foot_id].T_World ) );
     LFTask->SetDesiredVelocity( Vector(6,0.0) );
     LFTask->SetGains(0,0,0);
 
@@ -85,7 +85,7 @@ void TrajFollowing::CreateTasks(Config q_init)
 
     for( int i=0;i<q_init.size();i++)
     {
-        jointTasks[i]->SetName( robot_.linkNames[i] );
+        //jointTasks[i]->SetName( robot_.linkNames[i] );
         jointTasks[i]->SetDesiredValue(Vector(1, q_init[i]));
         jointTasks[i]->SetDesiredVelocity(Vector(1,0.0));
         jointTasks[i]->SetGains(-1, -0.0, -0.1);
@@ -129,14 +129,13 @@ void TrajFollowing::LoadTrajectory()
 std::pair<Vector,Vector> TrajFollowing::Trigger(Config q, Vector dq, double dt, double time_cur)
 {
     // Updates tasks desired value following trajectory
-    Config qt_tmp = traj_.eval(time_cur);
-    Vector qp_tmp = traj_.eval(time_cur-dt_);
-    opController_->SetDesiredValuesFromConfig( qt_tmp);
-    opController_->SetDesiredVelocityFromDifference( qp_tmp, qt_tmp, dt_ );
-
+    //Config qt_tmp = traj_.eval( time_cur );
+    //Vector qp_tmp = traj_.eval( time_cur-dt_ );
+    opController_->SetDesiredValuesFromConfig( q );
+    opController_->SetDesiredVelocityFromDifference( q+dq, q, dt_ );
     // Solves the stack of task
     std::pair<Vector,Vector> q_out = opController_->Solve( q, dq, dt );
-    opController_->Advance(q, dq, dt);
+    opController_->Advance( q, dq, dt );
     return q_out;
 }
 
@@ -144,17 +143,19 @@ std::pair<Vector,Vector> TrajFollowing::Trigger(Config q, Vector dq, double dt, 
 Config TrajFollowing::GetSensedConfig(double time)
 {
     Config q = traj_.eval( time );
-    Vector q_max( q.n, 0.01 );
-    Vector q_min( q.n, -0.01 );
-    Statistics::BoxProbabilityDistribution dist(q_max,q_min);
-    Config q_noise;
+    double noise_std_dev = 0.5;
+    Vector q_max( q.n, noise_std_dev );
+    Vector q_min( q.n, -noise_std_dev );
+    Statistics::BoxProbabilityDistribution dist( q_max, q_min );
+    Config q_noise(q.n);
     dist.Sample(q_noise);
 
     // Generate noise only one upper body joints
     Config q_tmp = q + q_noise;
-    for(int i=0;i<6;i++)
-        q_tmp[i] = q[i];
-    return q_tmp;
+    //cout << q_noise << endl;
+    for(int i=6;i<q_tmp.size();i++)
+        q[i] = q_tmp[i];
+    return q;
 }
 
 double TrajFollowing::GetRealTime()
@@ -191,7 +192,7 @@ void TrajFollowing::Run()
 //        cout << GetRealTime() - chrono_start << " sec" << endl;
 
         // Print status
-        //opController_->PrintStatus(q);
+        //opController_->PrintStatus( q_out.second );
         time += dt_;
     }
 }

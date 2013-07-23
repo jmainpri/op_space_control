@@ -2,7 +2,7 @@
 #define TRAJFOLLOING_H
 
 #include "trajectory.h"
-#include "urdf-parser.h"
+#include "robotics/RobotDynamics3D.h"
 #include "controller.h"
 
 namespace op_space_control
@@ -11,19 +11,20 @@ typedef std::vector<double> OpVect;
 class TrajFollowing
 {
 public:
-    TrajFollowing(Robot& robot);
+    TrajFollowing(RobotDynamics3D& robot);
     ~TrajFollowing();
 
-    void CreateTasks( Config q_init );
     void LoadTrajectory();
+    void CreateTasks( Config q_init );
     void Run();
+    Config GetInitConfig() { return traj_.eval(0); }
 
 private:
     double GetRealTime();
     std::pair<Vector,Vector> Trigger(Config q, Vector dq, double dt, double time_cur);
     Config GetSensedConfig(double time);
 
-    Robot& robot_;
+    RobotDynamics3D& robot_;
     Trajectory traj_;
     OperationalSpaceController* opController_;
     double dt_;

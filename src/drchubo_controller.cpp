@@ -67,20 +67,20 @@ void DRCHuboOpSpace::CreateTasks(const OpVect& q_init)
 
     // priority 1
     // right foot task
-    cout << "Create left foot task" << endl;
-    LinkTask* RFTask = new LinkTask( (*robot_), left_foot_id, "po" ); // LAR
+    cout << "Create right foot task" << endl;
+    LinkTask* RFTask = new LinkTask( (*robot_), right_foot_id, "po" ); // RAR
     RFTask->SetPriority(1);
     RFTask->SetName("LF");
-    RFTask->SetDesiredValue( GetPushedFrame( (*robot_).links[left_foot_id].T_World ) );
+    RFTask->SetDesiredValue( GetPushedFrame( (*robot_).links[right_foot_id].T_World ) );
     RFTask->SetDesiredVelocity( Vector(6,0.0) );
     RFTask->SetGains(0,0,0);
 
     // the same with left foot
-    cout << "Create right foot task" << endl;
-    LinkTask* LFTask = new LinkTask( (*robot_), right_foot_id, "po"); // RAR
+    cout << "Create left foot task" << endl;
+    LinkTask* LFTask = new LinkTask( (*robot_), left_foot_id, "po"); // LAR
     LFTask->SetPriority(1);
     LFTask->SetName("RF");
-    LFTask->SetDesiredValue( GetPushedFrame( (*robot_).links[right_foot_id].T_World ) );
+    LFTask->SetDesiredValue( GetPushedFrame( (*robot_).links[left_foot_id].T_World ) );
     LFTask->SetDesiredVelocity( Vector(6,0.0) );
     LFTask->SetGains(0,0,0);
 
@@ -153,7 +153,7 @@ void DRCHuboOpSpace::CreateTasks(const OpVect& q_init)
 std::pair<OpVect,OpVect> DRCHuboOpSpace::Trigger( const OpVect& q, const OpVect& dq, double dt )
 {
     opController_->SetDesiredValuesFromConfig( GetKrisVector(q) );
-    opController_->SetDesiredVelocityFromDifference( GetKrisVector(q), GetKrisVector(dq), dt );
+    opController_->SetDesiredVelocityFromDifference( GetKrisVector(dq)+GetKrisVector(q), GetKrisVector(q), dt );
 
     // Solves the stack of tasks
     std::pair<Vector,Vector> out_tmp = opController_->Solve( GetKrisVector(q), GetKrisVector(dq), dt );
@@ -165,12 +165,12 @@ std::pair<OpVect,OpVect> DRCHuboOpSpace::Trigger( const OpVect& q, const OpVect&
         out.second = MapConfig( GetStdVector( out_tmp.second ), true );
     }
     else {
-        out.first = GetStdVector( out_tmp.first );
+        out.first = GetStdVector( out_tmp.first ); //
         out.second = GetStdVector( out_tmp.second );
     }
 
-    opController_->Advance( GetKrisVector(q), GetKrisVector(dq), dt);
-    opController_->PrintStatus( GetKrisVector(q) );
+    opController_->Advance( GetKrisVector(out.second), GetKrisVector(out.first), dt);
+    //opController_->PrintStatus( GetKrisVector(out.second) );
     return out;
 }
 

@@ -11,6 +11,9 @@
 
 #include "urdf-parser.h"
 
+#include "utils/ioutils.h"
+#include "robotics/DenavitHartenberg.h"
+
 using std::cout;
 using std::endl;
 
@@ -19,7 +22,7 @@ namespace op_space_control // for linking with robotsim
 class URDFLinkNode
 {
 public:
-    URDFLinkNode(boost::shared_ptr<urdf::Link>& link, int index, int index_parent);
+    URDFLinkNode(boost::shared_ptr<urdf::Link> link, int index, int index_parent);
     void GetTransformations();
     void GetGeometryProperty();
     void GetJoint();
@@ -61,7 +64,7 @@ std::string URDFConverter::primitive_mesh_path("data/objects/urdf_primitives/");
 //---------------------------------------------------------------
 //---------------------------------------------------------------
 
-URDFLinkNode::URDFLinkNode(boost::shared_ptr<urdf::Link>& _link, int _index, int
+URDFLinkNode::URDFLinkNode(boost::shared_ptr<urdf::Link> _link, int _index, int
                            _index_parent)
 {
     link = _link;
@@ -317,7 +320,27 @@ void URDFConverter::processTParentTransformations(std::vector<URDFLinkNode>& lin
 //    return str.substr(0,pos+1);
 //}
 
-bool Robot::load_urdf( std::string filename )
+void GetAccMax(const UrdfRobotParser& robot, Vector& accMax) {
+    accMax = robot.torqueMax;
+    Real sumMass = 0;
+    Real sumCom = 0;
+    for (int i = accMax.n - 1; i >= 0; i--) {
+        Real oldMass = sumMass;
+        Real oldCom = sumCom;
+        sumMass += robot.links[i].mass;
+        oldCom += robot.links[i].T0_Parent.t.length();
+        sumCom = (robot.links[i].com.length() * robot.links[i].mass
+                + oldCom * oldMass) / (robot.links[i].mass + oldMass);
+        accMax(i) = robot.torqueMax[i] / (sumCom * sumMass * 9.8);
+        if (!IsFinite(accMax(i))) {
+            printf("Warning, infinite acceleration limit for joint %d\n", i);
+            printf("Press enter to continue\n");
+            getchar();
+        }
+    }
+}
+
+bool UrdfRobotParser::LoadUrdf( std::string filename )
 {
 //    std::string s( filename );
 //    std::string path = GetFilePath(s);
