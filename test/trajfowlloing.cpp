@@ -126,7 +126,7 @@ void TrajFollowing::LoadTrajectory()
 
 // Triggers Operational Space Controller to compute (qdes, dqdes),
 // and update tasks states """
-void TrajFollowing::Trigger(Config q, Vector dq, double dt, double time_cur)
+std::pair<Vector,Vector> TrajFollowing::Trigger(Config q, Vector dq, double dt, double time_cur)
 {
     // Updates tasks desired value following trajectory
     Config qt_tmp = traj_.eval(time_cur);
@@ -135,11 +135,9 @@ void TrajFollowing::Trigger(Config q, Vector dq, double dt, double time_cur)
     opController_->SetDesiredVelocityFromDifference( qp_tmp, qt_tmp, dt_ );
 
     // Solves the stack of task
-    // (dqdes, qdes) = opController_.Solve( q, dq, dt ); TODO unstack
-    opController_->Solve( q, dq, dt );
+    std::pair<Vector,Vector> q_out = opController_->Solve( q, dq, dt );
     opController_->Advance(q, dq, dt);
-    //return (dqdes, qdes);
-    return;
+    return q_out;
 }
 
 // Simulate error on the trajectory
@@ -173,9 +171,8 @@ void TrajFollowing::Run()
 
     while( traj_.length_ > time )
     {
-        cout<< "Time t=" << time << endl;
-
-        double chrono_start = GetRealTime();
+//        cout<< "Time t=" << time << endl;
+//        double chrono_start = GetRealTime();
 
         Config q = GetSensedConfig( time );
 
@@ -188,14 +185,13 @@ void TrajFollowing::Run()
         q_last_ = q;
 
         // Gets solution in operational space
-        Trigger( q, dq, dt_, time );
-
-        cout << GetRealTime() - chrono_start << " sec" << endl;
-        // Vector qdes, dqdes;
-        // opController_->SetPIDCommand( qdes, dqdes );
+        std::pair<Vector,Vector> q_out = Trigger( q, dq, dt_, time );
+//        cout << "q_out.first : " << q_out.first << endl;
+//        cout << "q_out.second : " << q_out.second << endl;
+//        cout << GetRealTime() - chrono_start << " sec" << endl;
 
         // Print status
-        opController_->PrintStatus(q);
+        //opController_->PrintStatus(q);
         time += dt_;
     }
 }

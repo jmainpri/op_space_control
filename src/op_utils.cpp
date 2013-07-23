@@ -35,6 +35,26 @@ std::vector<double> op_space_control::GetStdVector(const Vector3& pos)
     return vect;
 }
 
+std::vector<double> op_space_control::GetStdVector(const Math::Vector& vect)
+{
+    std::vector<double> out( vect.size() );
+    for(int i=0;i<vect.size();i++)
+    {
+        out[i] = vect[i];
+    }
+    return out;
+}
+
+Math::Vector op_space_control::GetKrisVector(const std::vector<double>& vect)
+{
+    Math::Vector out( vect.size() );
+    for(int i=0;i<vect.size();i++)
+    {
+        out[i] = vect[i];
+    }
+    return out;
+}
+
 Vector3 op_space_control::GetVector3(const Vector& vect)
 {
     Vector3 pos;

@@ -13,8 +13,9 @@
 
 using std::cout;
 using std::endl;
-using namespace op_space_control;
 
+namespace op_space_control // for linking with robotsim
+{
 class URDFLinkNode
 {
 public:
@@ -304,22 +305,22 @@ void URDFConverter::processTParentTransformations(std::vector<URDFLinkNode>& lin
 //---------------------------------------------------------------
 //---------------------------------------------------------------
 
-std::string GetFilePath(const std::string& str)
-{
-    size_t pos = str.rfind('\\');
-    if(pos == std::string::npos){
-        pos = str.rfind('/');
-        if(pos == std::string::npos){
-            return "";
-        }
-    }
-    return str.substr(0,pos+1);
-}
+//std::string GetFilePath(const std::string& str)
+//{
+//    size_t pos = str.rfind('\\');
+//    if(pos == std::string::npos){
+//        pos = str.rfind('/');
+//        if(pos == std::string::npos){
+//            return "";
+//        }
+//    }
+//    return str.substr(0,pos+1);
+//}
 
 bool Robot::load_urdf( std::string filename )
 {
-    std::string s( filename );
-    std::string path = GetFilePath(s);
+//    std::string s( filename );
+//    std::string path = GetFilePath(s);
 
     // Read the urdf into a string
     std::string xml_model_string;
@@ -541,4 +542,5 @@ bool Robot::load_urdf( std::string filename )
     this->UpdateConfig(q);
     cout << "Done loading robot file.\n" << endl;
     return true;
+}
 }

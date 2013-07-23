@@ -17,7 +17,9 @@ ENDIF(NOT CMAKE_BUILD_TYPE)
 # ---------------------------------
 # ---------------------------------
 
-include_directories( ${PROJECT_SOURCE_DIR}/libraries/KrisLibrary )
+# TODO fix use only one library
+#include_directories( ${PROJECT_SOURCE_DIR}/libraries/KrisLibrary )
+include_directories( /home/jmainpri/workspace/RobotSim/Library/KrisLibrary )
 
 # Check if the user is set up to parse URDFs
 find_package( urdfdom QUIET )
@@ -47,13 +49,16 @@ list( SORT lib_source )
 
 # Define target
 add_library( ${PROJECT_NAME} SHARED ${lib_source} )
+#add_library( ${PROJECT_NAME} STATIC ${lib_source} )
 
 file( GLOB unit_tests_source "test/*.cpp" )
 list( SORT unit_tests_source )
 
 include_directories( src )
 add_executable( test ${unit_tests_source} )
-target_link_libraries( test ${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/libraries/KrisLibrary/lib/libKrisLibrary.a )
+# TODO fix use only one library
+#target_link_libraries( test ${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/libraries/KrisLibrary/lib/libKrisLibrary.a )
+target_link_libraries( test ${PROJECT_NAME} /home/jmainpri/workspace/RobotSim/Library/KrisLibrary/lib/libKrisLibrary.a )
 
 #enable_testing()
 #message(STATUS "\n-- UNIT TEST: ")
@@ -68,7 +73,7 @@ target_link_libraries( test ${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/libraries/Kris
 #    add_dependencies(check ${test_base})
 #endforeach(utest_src_file)
 
-file( GLOB headers "src/*.h" )
+file( GLOB headers "src/drchubo_controller.h" )
 
 install(FILES   ${headers} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/OpSpaceController)
 install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)

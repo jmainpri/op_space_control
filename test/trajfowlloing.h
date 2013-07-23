@@ -7,6 +7,7 @@
 
 namespace op_space_control
 {
+typedef std::vector<double> OpVect;
 class TrajFollowing
 {
 public:
@@ -19,7 +20,7 @@ public:
 
 private:
     double GetRealTime();
-    void Trigger(Config q, Vector dq, double dt, double time_cur);
+    std::pair<Vector,Vector> Trigger(Config q, Vector dq, double dt, double time_cur);
     Config GetSensedConfig(double time);
 
     Robot& robot_;

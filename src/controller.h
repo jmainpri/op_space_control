@@ -1,9 +1,12 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
+//! A two-level velocity-based operational space controller class, mapping from joint space into operational space.
+
 #include "robotics/RobotDynamics3D.h"
 
-//! A two-level velocity-based operational space controller class, mapping from joint space into operational space.
+// TODO can not currently link directly with RobotSim
+// It could work if the library was installed on the system
 
 namespace op_space_control
 {
@@ -51,7 +54,7 @@ public:
 
     //! Takes sensed q,dq, timestep dt and returns dqdes and qdes
     //! in joint space
-    Vector Solve( const Config& q, const Vector& dq, double dt );
+    std::pair<Vector,Vector> Solve( const Config& q, const Vector& dq, double dt );
 
     //! Updates all tasks states
     void Advance( const Config& q, const Vector& dq, double dt );

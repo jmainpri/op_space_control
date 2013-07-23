@@ -1,5 +1,4 @@
 #include "tasks.h"
-#include "robotics/RobotDynamics3D.h"
 #include "math/SVDecomposition.h"
 #include "math/DiagonalMatrix.h"
 #include "controller.h"
@@ -217,12 +216,13 @@ void OperationalSpaceController::CheckMax(double limit)
 
     if( m > limit )
     {
+        //cout << "Exceedes limits" << endl;
         for( int i=0; i<dqdes_.size();i++) // Scale down velocity
             dqdes_[i] /= m;
     }
 }
 
-Vector OperationalSpaceController::Solve( const Config& q, const Vector& dq, double dt )
+std::pair<Vector,Vector> OperationalSpaceController::Solve( const Config& q, const Vector& dq, double dt )
 {
     for( int i=0;i< int(taskList_.size()); i++ )
     {
@@ -248,17 +248,33 @@ Vector OperationalSpaceController::Solve( const Config& q, const Vector& dq, dou
     if ( Jtask.numCols() != 0 && Jtask.numRows() !=0  )
     {
         Vector Vtask = GetStackedVelocity( q, dq, 2 );
+        if( HasNaN(Vtask) ) {
+            cout << "Vtask has nan" << endl;
+            cout << "Vtask :" << Vtask << endl;
+            for(int i=0;i<Vtask.size();i++){
+              if(IsNaN(Vtask[i])) Vtask[i] = 0.0;
+            }
+        }
         Matrix JtaskN; JtaskN.mul( Jtask, N );
         //assert np.isfinite(Jtask).all(); TODO
         Vector Jtasktmp; Jtask.mul( dq1, Jtasktmp );
         Vector Vtask_m_resid; Vtask_m_resid.sub( Vtask , Jtasktmp );
         Vector z;
+        if( HasNaN(Jtasktmp) ) {
+            cout << "Jtasktmp has nan" << endl;
+        }
+        if( HasNaN(Vtask_m_resid) ) {
+            cout << "Vtask_m_resid has nan" << endl;
+        }
         try
         {
             Matrix JtaskNinv;
             Math::SVDecomposition<double> svd(JtaskN);
             svd.getInverse( JtaskNinv );
             JtaskNinv.mul( Vtask_m_resid, z );
+//            cout << "JtaskNinv : " << JtaskNinv << endl;
+//            cout << "Vtask_m_resid : " << Vtask_m_resid << endl;
+//            cout << "z : " << z << endl;
         }
         catch(...)
         {
@@ -267,11 +283,16 @@ Vector OperationalSpaceController::Solve( const Config& q, const Vector& dq, dou
             //z = np.linalg.lstsq(Jtask,Vtask_m_resid,rcond=1e-3)[0];
         }
         N.mul( z, dqtask );
+        //cout << "N : " << N << endl;
+        //cout << "z : " << z << endl;
+        //cout << "dqtask : " << dqtask << endl;
     }
     else
     {
         dqtask = Vector(dq1.size(),0.0);
     }
+
+    //cout << "dq1 : " << dq1 << endl;
 
     // compose the velocities together
     dqdes_ = dq1 + dqtask;
@@ -281,8 +302,10 @@ Vector OperationalSpaceController::Solve( const Config& q, const Vector& dq, dou
     q_tmp.madd( dqdes_, dt_ );
     qdes_ = q_tmp;
 
-    //return (dqdes_, qdes_); // TODO stack them
-    return dqdes_;
+    std::pair<Vector,Vector> out;
+    out.first = dqdes_;
+    out.second = qdes_;
+    return out;
 }
 
 void OperationalSpaceController::Advance( const Config& q, const Vector& dq, double dt )
