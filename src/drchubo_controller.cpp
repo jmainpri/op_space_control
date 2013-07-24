@@ -19,6 +19,7 @@ DRCHuboOpSpace::DRCHuboOpSpace()
 //    InitMaps();
     nb_dofs_ = 0;
     use_mapping_ = false;
+    dt_ = 0.005;
 }
 
 DRCHuboOpSpace::~DRCHuboOpSpace()
@@ -123,7 +124,7 @@ void DRCHuboOpSpace::CreateTasks(const OpVect& q_init)
 
     for( int i=0;i<int(q_init.size());i++)
     {
-        //jointTasks[i]->SetName( (*robot_).linkNames[i] );
+        jointTasks[i]->SetName( linkNames_[i] );
         jointTasks[i]->SetDesiredValue(Vector(1, q_init[i]));
         jointTasks[i]->SetDesiredVelocity(Vector(1,0.0));
         jointTasks[i]->SetGains(-1, -0.0, -0.1);
@@ -137,8 +138,8 @@ void DRCHuboOpSpace::CreateTasks(const OpVect& q_init)
 
     // Setup operational space controller
     cout << "Create operational space controller" << endl;
-    double dt = 0.02;
-    opController_ = new OperationalSpaceController((*robot_), dt);
+
+    opController_ = new OperationalSpaceController((*robot_), dt_);
     opController_->AddTask(RFTask);
     opController_->AddTask(LFTask);
     opController_->AddTask(comTask);
@@ -150,13 +151,10 @@ void DRCHuboOpSpace::CreateTasks(const OpVect& q_init)
 
 // Triggers Operational Space Controller to compute (qdes, dqdes),
 // and update tasks states """
-std::pair<OpVect,OpVect> DRCHuboOpSpace::Trigger( const OpVect& q, const OpVect& dq, double dt )
+std::pair<OpVect,OpVect> DRCHuboOpSpace::Trigger( const OpVect& q, const OpVect& dq )
 {
     opController_->SetDesiredValuesFromConfig( GetKrisVector(q) );
-    opController_->SetDesiredVelocityFromDifference( GetKrisVector(dq)+GetKrisVector(q), GetKrisVector(q), dt );
-
-    // Solves the stack of tasks
-    std::pair<Vector,Vector> out_tmp = opController_->Solve( GetKrisVector(q), GetKrisVector(dq), dt );
+    opController_->SetDesiredVelocityFromDifference( GetKrisVector(dq)+GetKrisVector(q), GetKrisVector(q), dt_ );
 
     std::pair<OpVect,OpVect> out;
     if( use_mapping_ )
@@ -169,7 +167,7 @@ std::pair<OpVect,OpVect> DRCHuboOpSpace::Trigger( const OpVect& q, const OpVect&
         out.second = GetStdVector( out_tmp.second );
     }
 
-    opController_->Advance( GetKrisVector(out.second), GetKrisVector(out.first), dt);
+    opController_->Advance( GetKrisVector(out.second), GetKrisVector(out.first), dt_ );
     //opController_->PrintStatus( GetKrisVector(out.second) );
     return out;
 }

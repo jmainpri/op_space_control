@@ -72,10 +72,13 @@ public:
     // Main function of the urdf parser
     bool LoadUrdf( std::string filename );
 
+    std::vector<std::string> GetLinkNames() { return linkNames; }
+
+private:
+
     // Index link names
     std::vector<std::string> linkNames;
 
-private:
     Vector accMax;   //conservative acceleration limits, used by DynamicPath
     std::vector<RobotJoint> joints;
     std::vector<RobotJointDriver> drivers;

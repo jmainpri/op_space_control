@@ -142,7 +142,7 @@ Vector COMTask::GetSensedValue( const Config& q )
     }
     com /= mass_;
 
-    if(baseLinkNo_ >= 0)
+    if( baseLinkNo_ >= 0 )
     {
         Frame3D Tbinv;
         Tbinv.setInverse( robot_.links[baseLinkNo_].T_World );
@@ -193,6 +193,7 @@ Matrix COMTask::GetJacobian( const Config& q )
             row = Jcom.row(j) - Jb.row(j);
         }
     }
+
     return Jcom;
 }
 
@@ -393,6 +394,7 @@ Matrix LinkTask::GetJacobian( const Config& q )
             row = J.row(i) - Jb.row(i);
         }
     }
+
     return J;
 }
 

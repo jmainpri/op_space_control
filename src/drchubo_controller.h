@@ -24,6 +24,8 @@ public:
     std::pair<OpVect,OpVect> Trigger(const OpVect& q, const OpVect& dq, double dt );
     void SetRobotNbDofs( int nb_dofs ) { nb_dofs_ = nb_dofs; }
     void SetRobot( RobotDynamics3D* robot ) { robot_ = robot; }
+    void SetLinkNames( const std::vector<std::string>& linknames ) { linkNames_ = linknames; }
+    void SetDeltaTime(double dt) { dt_ = dt; }
 
 private:
     void InitMaps();
@@ -32,8 +34,10 @@ private:
     OperationalSpaceController* opController_;
     std::map<std::string,int> rs_map;
     std::map<std::string,int> urdf_map;
+    std::vector<std::string> linkNames_;
     int nb_dofs_;
     bool use_mapping_;
+    double dt_;
 };
 }
 

@@ -3,7 +3,7 @@
 
 #include "trajectory.h"
 #include "robotics/RobotDynamics3D.h"
-#include "controller.h"
+#include "drchubo_controller.h"
 
 namespace op_space_control
 {
@@ -18,15 +18,17 @@ public:
     void CreateTasks( Config q_init );
     void Run();
     Config GetInitConfig() { return traj_.eval(0); }
+    void SetLinkNames( const std::vector<std::string>& linknames ) { linkNames_ = linknames; }
 
 private:
     double GetRealTime();
     std::pair<Vector,Vector> Trigger(Config q, Vector dq, double dt, double time_cur);
     Config GetSensedConfig(double time);
 
+    std::vector<std::string> linkNames_;
     RobotDynamics3D& robot_;
     Trajectory traj_;
-    OperationalSpaceController* opController_;
+    DRCHuboOpSpace* opController_;
     double dt_;
     Config q_last_;
 };

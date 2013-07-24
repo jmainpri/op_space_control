@@ -12,7 +12,7 @@ RobotsimParser::~RobotsimParser()
 
 }
 
-std::string RobotsimParser::LinkName(int i)
+std::vector<std::string> RobotsimParser::GetLinkNames()
 {
-
+    return linkNames;
 }

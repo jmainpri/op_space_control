@@ -5,19 +5,20 @@
 using std::cout;
 using std::endl;
 
-void trajectory_following( RobotDynamics3D& robot, Config q )
+void trajectory_following( RobotDynamics3D& robot, Config q, const std::vector<std::string>& linknames )
 {
     op_space_control::TrajFollowing test( robot );
     test.LoadTrajectory();
+    test.SetLinkNames( linknames );
     test.CreateTasks( test.GetInitConfig() );
     test.Run();
 }
 
-void print_link_names(const op_space_control::UrdfRobotParser& robot)
+void print_link_names(const std::vector<std::string>& linknames)
 {
-    for(int i=0;i<int(robot.links.size());i++)
+    for(int i=0;i<int(linknames.size());i++)
     {
-        cout << robot.LinkName(i) << " : " << robot.linkNames[i] << endl;
+        cout << i  << " : " << linknames[i] << endl;
     }
 }
 
@@ -31,9 +32,10 @@ void test_urdf()
     cout << "Number of links : " << robot.links.size() << endl;
     cout << "robot.q.n : " << robot.q.n << endl;
 
+    std::vector<std::string> linknames = robot.GetLinkNames();
     // Uncomment to print joint mapping
-    print_link_names( robot );
-    trajectory_following( robot, robot.q );
+    // print_link_names( linknames );
+    trajectory_following( robot, robot.q, linknames );
 }
 
 void test_robotsim()
@@ -46,7 +48,10 @@ void test_robotsim()
     cout << "Number of links : " << robot.links.size() << endl;
     cout << "robot.q.n : " << robot.q.n << endl;
 
-    trajectory_following( robot, robot.q );
+    std::vector<std::string> linknames = robot.GetLinkNames();
+    // Uncomment to print joint mapping
+    // print_link_names( linknames );
+    trajectory_following( robot, robot.q, linknames );
 }
 
 int main(int argc, char** argv)

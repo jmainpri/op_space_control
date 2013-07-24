@@ -169,7 +169,6 @@ private:
     int baseLinkNo_;
     RobotDynamics3D& robot_;
     Vector3 localPosition_;
-    std::string name_;
 };
 
 //! A joint angle task class
@@ -184,7 +183,6 @@ public:
 private:
     RobotDynamics3D& robot_;
     std::vector<int> jointIndices_;
-    std::string name_;
 };
 
 //! Check (q, dq) against joint limits
@@ -213,7 +211,6 @@ private:
     std::vector<double> weight_;
     Vector xdes_;
     Vector dxdes_;
-    std::string name_;
 };
 }
 
