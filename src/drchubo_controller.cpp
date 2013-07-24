@@ -2,9 +2,12 @@
 #include "tasks.h"
 #include "controller.h"
 #include "op_utils.h"
-#include "statistics/UniformDistribution.h"
-#include <sys/time.h>
 #include "urdf-parser.h"
+
+#include "statistics/UniformDistribution.h"
+#include "robotics/RobotDynamics3D.h"
+
+#include <sys/time.h>
 
 using namespace op_space_control;
 
@@ -60,18 +63,22 @@ OpVect DRCHuboOpSpace::MapConfig( const OpVect& q, bool map_out ) // TODO use ha
     return q_out;
 }
 
-void DRCHuboOpSpace::CreateTasks(const OpVect& q_init)
+void DRCHuboOpSpace::CreateTasks( const OpVect& q_init, double dt )
 {
+    dt_ = dt; // Set Delta Time
+
     int right_foot_id = 59; //      RAR, hubo+ robotsim -> 62,   drc_hubo urdf -> 59,   drc_hubo robotsim -> 59
     int left_foot_id = 52; //       LAR, hubo+ robotsim -> 56,   drc_hubo urdf -> 52,   drc_hubo robotsim -> 52
-    int hand_id = 11; //            LWP, hubo+ robotsim -> 13,   drc_hubo urdf -> 11,   drc_hubo robotsim -> 11
+    //int hand_id = 11; //            LWP, hubo+ robotsim -> 13,   drc_hubo urdf -> 11,   drc_hubo robotsim -> 11
+    int right_hand_id = 32; //      RWR, drc_hubo robotsim -> 12
+    int left_hand_id = 12;  //      LWR, drc_hubo robotsim -> 32
 
     // priority 1
     // right foot task
     cout << "Create right foot task" << endl;
     LinkTask* RFTask = new LinkTask( (*robot_), right_foot_id, "po" ); // RAR
     RFTask->SetPriority(1);
-    RFTask->SetName("LF");
+    RFTask->SetName("Left Foot");
     RFTask->SetDesiredValue( GetPushedFrame( (*robot_).links[right_foot_id].T_World ) );
     RFTask->SetDesiredVelocity( Vector(6,0.0) );
     RFTask->SetGains(0,0,0);
@@ -80,10 +87,36 @@ void DRCHuboOpSpace::CreateTasks(const OpVect& q_init)
     cout << "Create left foot task" << endl;
     LinkTask* LFTask = new LinkTask( (*robot_), left_foot_id, "po"); // LAR
     LFTask->SetPriority(1);
-    LFTask->SetName("RF");
+    LFTask->SetName("Right Foot");
     LFTask->SetDesiredValue( GetPushedFrame( (*robot_).links[left_foot_id].T_World ) );
     LFTask->SetDesiredVelocity( Vector(6,0.0) );
     LFTask->SetGains(0,0,0);
+
+    cout << "Create right hand task" << endl;
+    LinkTask* RHTask = new LinkTask( (*robot_), right_hand_id, "po" ); // RWR
+    // maintain position & orientation relative to foot
+    RHTask->SetBaseLinkNo( left_foot_id ); // RWR
+    // point around middle of palm
+    RHTask->SetLocalPosition( Vector3(0.0,0.0,-0.07) ); // TODO see offset
+    RHTask->SetName("Right Hand");
+    RHTask->SetDesiredValue( RHTask->GetSensedValue( q_init ) );
+    RHTask->SetDesiredVelocity( Vector(3,0.0) );
+    RHTask->SetGains(-10,-0.1,-1);
+    RHTask->SetPriority(2);
+    RHTask->SetWeight(Vector(1,1.0));
+
+    cout << "Create right hand task" << endl;
+    LinkTask* LHTask = new LinkTask( (*robot_), left_hand_id, "po" ); // LWR
+    // maintain position & orientation relative to foot
+    LHTask->SetBaseLinkNo( left_foot_id ); // LWR
+    // point around middle of palm
+    LHTask->SetLocalPosition( Vector3(0.0,0.0,-0.07) ); // TODO see offset
+    LHTask->SetName("Left Hand");
+    LHTask->SetDesiredValue( LHTask->GetSensedValue( q_init ) );
+    LHTask->SetDesiredVelocity( Vector(3,0.0) );
+    LHTask->SetGains(-10,-0.1,-1);
+    LHTask->SetPriority(2);
+    LHTask->SetWeight(Vector(1,1.0));
 
     // priority 2
     // CoM task
@@ -92,7 +125,7 @@ void DRCHuboOpSpace::CreateTasks(const OpVect& q_init)
     // maintain position relative to foot
     comTask->SetBaseLinkNo( left_foot_id ); // LAR
     comTask->SetPriority(2);
-    comTask->SetDesiredValue( comTask->GetSensedValue( GetKrisVector(q_init) ) );
+    comTask->SetDesiredValue( comTask->GetSensedValue( q_init ) );
     comTask->SetDesiredVelocity( Vector(3,0.0) );
     comTask->SetGains(-10.0,-0.5,-0.5);
     Vector weights(3);
@@ -101,19 +134,19 @@ void DRCHuboOpSpace::CreateTasks(const OpVect& q_init)
     weights[2] = 0.1;
     comTask->SetWeight(weights);
 
-    // link-13 hand task
-    cout << "Create hand task" << endl;
-    LinkTask* handTask = new LinkTask( (*robot_), hand_id, "position" ); // LWP
-    // maintain position relative to foot
-    handTask->SetBaseLinkNo( left_foot_id ); // LAR
-    // point around middle of palm
-    handTask->SetLocalPosition( Vector3(0.0,0.0,-0.07) );
-    handTask->SetName("handTask");
-    handTask->SetDesiredValue( handTask->GetSensedValue( GetKrisVector(q_init) ) );
-    handTask->SetDesiredVelocity( Vector(3,0.0) );
-    handTask->SetGains(-10,-0.1,-1);
-    handTask->SetPriority(2);
-    handTask->SetWeight(Vector(1,1.0));
+//    // link-13 hand task
+//    cout << "Create hand task" << endl;
+//    LinkTask* handTask = new LinkTask( (*robot_), hand_id, "position" ); // LWP
+//    // maintain position relative to foot
+//    handTask->SetBaseLinkNo( left_foot_id ); // LAR
+//    // point around middle of palm
+//    handTask->SetLocalPosition( Vector3(0.0,0.0,-0.07) );
+//    handTask->SetName("handTask");
+//    handTask->SetDesiredValue( handTask->GetSensedValue( (q_init) ) );
+//    handTask->SetDesiredVelocity( Vector(3,0.0) );
+//    handTask->SetGains(-10,-0.1,-1);
+//    handTask->SetPriority(2);
+//    handTask->SetWeight(Vector(1,1.0));
 
     // joint task
     cout << "Create joint task" << endl;
@@ -139,36 +172,47 @@ void DRCHuboOpSpace::CreateTasks(const OpVect& q_init)
     // Setup operational space controller
     cout << "Create operational space controller" << endl;
 
-    opController_ = new OperationalSpaceController((*robot_), dt_);
-    opController_->AddTask(RFTask);
+    opController_ = new OperationalSpaceController((*robot_), dt_ );
+    opController_->AddTask(RFTask); // Feet
     opController_->AddTask(LFTask);
-    opController_->AddTask(comTask);
-    opController_->AddTask(handTask);
+    //opController_->AddTask(RHTask); // Hands
+    //opController_->AddTask(LHTask);
+    opController_->AddTask(comTask); // Center of mass
 
-    for( int i=0;i<q_init.size();i++)
-        opController_->AddTask( jointTasks[i] );
+//    for( int i=0;i<q_init.size();i++)
+//        opController_->AddTask( jointTasks[i] );
 }
 
 // Triggers Operational Space Controller to compute (qdes, dqdes),
 // and update tasks states """
-std::pair<OpVect,OpVect> DRCHuboOpSpace::Trigger( const OpVect& q, const OpVect& dq )
+std::pair<OpVect,OpVect> DRCHuboOpSpace::Trigger( const OpVect& q_cur_in, const OpVect& dq_cur_in,
+                                                  const OpVect& q_des_in, const OpVect& dq_des_in, double dt )
 {
-    opController_->SetDesiredValuesFromConfig( GetKrisVector(q) );
-    opController_->SetDesiredVelocityFromDifference( GetKrisVector(dq)+GetKrisVector(q), GetKrisVector(q), dt_ );
+    // Current and desired configurations
+    const Config q_cur((q_cur_in));
+    const Config q_des((q_des_in));
 
-    std::pair<OpVect,OpVect> out;
+    // Current and desired velocities
+    const Vector dq_cur((dq_cur_in));
+    const Vector dq_des((dq_des_in));
+
+    // Set desired config and vel
+    opController_->SetDesiredValuesFromConfig( (q_des) );
+    opController_->SetDesiredVelocityFromDifference( (dq_des)+(q_des), (dq_des), dt );
+
+    // Solve the operational space control problem
+    std::pair<OpVect,OpVect> out = opController_->Solve( (q_cur), (dq_cur), dt );
+
+    // Reformap output
     if( use_mapping_ )
     {
-        out.first = MapConfig( GetStdVector( out_tmp.first ), true );
-        out.second = MapConfig( GetStdVector( out_tmp.second ), true );
-    }
-    else {
-        out.first = GetStdVector( out_tmp.first ); //
-        out.second = GetStdVector( out_tmp.second );
+        out.first = MapConfig( ( out.first ), true );
+        out.second = MapConfig( ( out.second ), true );
     }
 
-    opController_->Advance( GetKrisVector(out.second), GetKrisVector(out.first), dt_ );
-    //opController_->PrintStatus( GetKrisVector(out.second) );
+    // Advance and print status
+    opController_->Advance( (out.second), (out.first), dt );
+    opController_->PrintStatus( (q_cur) );
     return out;
 }
 

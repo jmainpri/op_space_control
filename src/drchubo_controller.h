@@ -5,8 +5,7 @@
 #include <map>
 #include <string>
 
-//TODO Remove
-#include "robotics/RobotDynamics3D.h"
+class RobotDynamics3D;
 
 namespace op_space_control
 {
@@ -20,12 +19,12 @@ public:
     ~DRCHuboOpSpace();
 
     OpVect MapConfig( const OpVect& q, bool map_out = false);
-    void CreateTasks( const OpVect& q_init );
-    std::pair<OpVect,OpVect> Trigger(const OpVect& q, const OpVect& dq, double dt );
+    void CreateTasks( const OpVect& q_init, double dt );
+    std::pair<OpVect,OpVect> Trigger( const OpVect& q_cur_in, const OpVect& dq_cur_in,
+                                      const OpVect& q_des_in, const OpVect& dq_des_in, double dt );
     void SetRobotNbDofs( int nb_dofs ) { nb_dofs_ = nb_dofs; }
     void SetRobot( RobotDynamics3D* robot ) { robot_ = robot; }
     void SetLinkNames( const std::vector<std::string>& linknames ) { linkNames_ = linknames; }
-    void SetDeltaTime(double dt) { dt_ = dt; }
 
 private:
     void InitMaps();

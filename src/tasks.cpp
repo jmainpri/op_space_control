@@ -12,24 +12,33 @@ OperationalSpaceTask::OperationalSpaceTask()
     weight_.resize(1); weight_[0] = 1; // TODO ask kris about printf in resize
     //weight_.push_back(1); // Ask Kris to implement it
     name_ = "unnamed";
-    hP_;
-    hD_;
-    hI_;
-    qLast_;
-    xdes_;
-    dxdes_;
-    eI_;
+    hP_ = -1;
+    hD_ = 0;
+    hI_ = 0;
+    qLast_ = Vector(0);
+    xdes_= Vector(1,0.0);
+    dxdes_= Vector(1,0.0);
+    eI_ = Vector(0);
 }
 
 // vcmd = hP*eP + hD*eV + hI*eI
 Vector OperationalSpaceTask::GetCommandVelocity( const Config& q, const Vector&  dq, double dt )
 {
     Vector eP = GetSensedError( q );
+    if( HasNaN(eP) )
+    {
+        cout << "eP has nan" << endl;
+    }
+
+    Vector vcur = GetSensedVelocity( q, dq, dt );
+    if( HasNaN(vcur) )
+    {
+        cout << "vcur has nan" << endl;
+    }
 
     // P term
     Vector vP = eP * hP_;
     Vector vcmd = vP;
-    Vector vcur = GetSensedVelocity( q, dq, dt );
 
     // D term
     if( vcur.size() != 0 )
@@ -71,9 +80,9 @@ void OperationalSpaceTask::Advance( const Config& q, const Vector&  dq, double d
     qLast_ = q; // update qLast
 }
 
+//! Returns x(q)-xdes where - is the task-space differencing operator
 Vector OperationalSpaceTask::GetSensedError( const Vector& q)
 {
-    // Returns x(q)-xdes where - is the task-space differencing operator
     return TaskDifference( GetSensedValue(q), xdes_ );
 }
 
@@ -260,7 +269,7 @@ void LinkTask::SetTaskType(const std::string& taskType)
     }
 }
 
-Vector LinkTask::GetSensedValue( const Vector& q )
+Vector LinkTask::GetSensedValue( const Config& q )
 {
     robot_.UpdateConfig(q);
 
@@ -269,9 +278,8 @@ Vector LinkTask::GetSensedValue( const Vector& q )
     // Check if relative transform task, modify T to local transform
     if( baseLinkNo_ >= 0 )
     {
-        const Frame3D& Tb = robot_.links[baseLinkNo_].T_World;
         Frame3D Tbinv;
-        Tbinv.setInverse(Tb);
+        Tbinv.setInverse( robot_.links[baseLinkNo_].T_World );
         T = Tbinv * T;
     }
 

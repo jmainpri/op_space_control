@@ -144,7 +144,6 @@ public:
 private:
     RobotDynamics3D& robot_;
     double mass_;
-    std::string name_;
     int baseLinkNo_;
 };
 

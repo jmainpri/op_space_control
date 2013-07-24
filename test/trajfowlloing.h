@@ -11,7 +11,7 @@ typedef std::vector<double> OpVect;
 class TrajFollowing
 {
 public:
-    TrajFollowing(RobotDynamics3D& robot);
+    TrajFollowing(RobotDynamics3D& robot, double dt);
     ~TrajFollowing();
 
     void LoadTrajectory();
@@ -31,6 +31,7 @@ private:
     DRCHuboOpSpace* opController_;
     double dt_;
     Config q_last_;
+    Config dq_last_;
 };
 }
 

@@ -180,7 +180,7 @@ Matrix OperationalSpaceController::GetStackedJacobian( const Config& q, const Ve
 
 Vector OperationalSpaceController::GetStackedVelocity( const Config& q, const Vector& dq, int priority)
 {
-    Vector V;
+    Vector V(0);
     for( int i=0;i< int(taskList_.size()); i++ )
     {
         if( taskList_[i]->GetWeight().empty() )
@@ -193,6 +193,9 @@ Vector OperationalSpaceController::GetStackedVelocity( const Config& q, const Ve
             // scale by weight
             Vector Vtemp = taskList_[i]->GetCommandVelocity( q, dq, dt_) * taskList_[i]->GetWeight()[0]; // TODO why size 0???
 
+            if( HasNaN( Vtemp) ) {
+                cout << "Vtemp has nan in task : " << taskList_[i]->GetName() << endl;
+            }
             if( V.empty() )
             {
                 V = Vtemp;
@@ -260,6 +263,9 @@ std::pair<Vector,Vector> OperationalSpaceController::Solve( const Config& q, con
         Vector Jtasktmp; Jtask.mul( dq1, Jtasktmp );
         Vector Vtask_m_resid; Vtask_m_resid.sub( Vtask , Jtasktmp );
         Vector z;
+        if( HasNaN(JtaskN) ) {
+            cout << "JtaskN has nan" << endl;
+        }
         if( HasNaN(Jtasktmp) ) {
             cout << "Jtasktmp has nan" << endl;
         }

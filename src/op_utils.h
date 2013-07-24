@@ -11,10 +11,7 @@ namespace op_space_control
 {
 std::vector<int> GetStdVector(int value);
 std::vector<double> GetStdVector(double value);
-
 std::vector<double> GetStdVector(const Math3D::Vector3& pos);
-std::vector<double> GetStdVector(const Math::Vector& vect);
-Math::Vector GetKrisVector(const std::vector<double>& vect);
 
 Math3D::Vector3 GetVector3(const Math3D::Vector& vect);
 float* GetGlVector3(const Math3D::Vector3& pos);

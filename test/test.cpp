@@ -7,7 +7,7 @@ using std::endl;
 
 void trajectory_following( RobotDynamics3D& robot, Config q, const std::vector<std::string>& linknames )
 {
-    op_space_control::TrajFollowing test( robot );
+    op_space_control::TrajFollowing test( robot, 0.005 );
     test.LoadTrajectory();
     test.SetLinkNames( linknames );
     test.CreateTasks( test.GetInitConfig() );

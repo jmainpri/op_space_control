@@ -10,9 +10,9 @@ using namespace op_space_control;
 using std::cout;
 using std::endl;
 
-TrajFollowing::TrajFollowing(RobotDynamics3D& robot) : robot_( robot )
+TrajFollowing::TrajFollowing( RobotDynamics3D& robot, double dt ) : robot_( robot ), dt_(dt)
 {
-    dt_ = 0.000000001;
+
 }
 
 TrajFollowing::~TrajFollowing()
@@ -26,7 +26,7 @@ void TrajFollowing::CreateTasks( Config q_init )
     opController_ = new DRCHuboOpSpace();
     opController_->SetRobot(&robot_);
     opController_->SetLinkNames(linkNames_);
-    opController_->CreateTasks( GetStdVector(q_init) );
+    opController_->CreateTasks( q_init, dt_ );
 }
 
 void TrajFollowing::LoadTrajectory()
@@ -45,12 +45,12 @@ void TrajFollowing::LoadTrajectory()
 
 // Triggers Operational Space Controller to compute (qdes, dqdes),
 // and update tasks states """
-std::pair<Vector,Vector> TrajFollowing::Trigger(Config q, Vector dq, double dt, double time_cur)
+std::pair<Vector,Vector> TrajFollowing::Trigger( Config q, Vector dq, double dt, double time_cur )
 {
-    std::pair<OpVect,OpVect> qdes = opController_->Trigger( GetStdVector(q), GetStdVector(dq), dt );
+    std::pair<OpVect,OpVect> qdes = opController_->Trigger( q_last_, dq_last_, q, dq, dt );
     std::pair<Vector,Vector> out;
-    out.first = GetKrisVector( qdes.first );
-    out.second = GetKrisVector( qdes.second );
+    out.first =  qdes.first;
+    out.second = qdes.second;
     return out;
 }
 
@@ -58,7 +58,7 @@ std::pair<Vector,Vector> TrajFollowing::Trigger(Config q, Vector dq, double dt, 
 Config TrajFollowing::GetSensedConfig(double time)
 {
     Config q = traj_.eval( time );
-    double noise_std_dev = 20000000000;
+    double noise_std_dev = 0.01;
     Vector q_max( q.n, noise_std_dev );
     Vector q_min( q.n, -noise_std_dev );
     Statistics::BoxProbabilityDistribution dist( q_max, q_min );
@@ -94,27 +94,28 @@ void TrajFollowing::Run()
 //        cout<< "Time t=" << time << endl;
 //        double chrono_start = GetRealTime();
 
-        //Config q = GetSensedConfig( time );
+//        q = GetSensedConfig( time );
 
         if( start )
         {
-            q = q_init;
+            q_last_ = q = q_init;
             start =false;
         }
 
         Vector dq;
         if(q_last_.empty())
-            dq = Vector(q.n,0.0);
+            dq = Vector( q.n, 0.0 );
         else
             dq = ( q - q_last_) / dt_;
 
-        q_last_ = q;
-
         // Gets solution in operational space
         std::pair<Vector,Vector> q_out = Trigger( q, dq, dt_, time );
-        ///q += ( q_out.first * dt_ );
+
+        q_last_ = q;
+        dq_last_ = dq;
+
         q = q_out.second;
-        //cout << q_out.second << endl;
+        cout << q_out.second << endl;
         // Print status
         //opController_->PrintStatus( q_out.second );
         time += dt_;
