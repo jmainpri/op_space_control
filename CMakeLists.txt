@@ -5,6 +5,7 @@ project(op-space-control)
 set(LIBRARY_INSTALL_PATH ${CMAKE_INSTALL_PREFIX}/lib)
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/scripts)
 
 # Default mode is Release
 IF(NOT CMAKE_BUILD_TYPE)
@@ -57,6 +58,9 @@ list( SORT lib_source )
 find_package( OpenGL REQUIRED )
 link_libraries( ${OPENGL_LIBRARIES} )
 
+find_package(Eigen3 REQUIRED)
+INCLUDE_directories(${EIGEN3_INCLUDE_DIR})
+
 set( RobotSim_libs
 ${RobotSim_dir}/lib/libRobotSim.a
 ${RobotSim_dir}/Library/glui-2.36/src/lib/libglui.a
@@ -91,7 +95,7 @@ target_link_libraries( test ${PROJECT_NAME} ${RobotSim_libs} )
 #    add_dependencies(check ${test_base})
 #endforeach(utest_src_file)
 
-file( GLOB headers "src/drchubo_controller.h" )
+file( GLOB headers "src/controller.h" "src/drchubo_controller.h" )
 
 install(FILES   ${headers} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/OpSpaceController)
 install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)

@@ -17,6 +17,9 @@ Math3D::Vector3 GetVector3(const Math3D::Vector& vect);
 float* GetGlVector3(const Math3D::Vector3& pos);
 Vector GetVector(const Math3D::Vector3& pos);
 
+std::vector< std::vector<double> > GetStdMatrix( const Matrix& mat );
+Matrix GetKrisMatrix( const std::vector< std::vector<double> >& mat );
+
 void PushRotationToVector( const Math3D::Matrix3& R, Math::Vector& x );
 void PopRotationFromVector( Math::Vector& x, Math3D::Matrix3& R );
 
@@ -30,8 +33,9 @@ Math::Vector GetPushedFrame( const Frame3D& T );
 
 Vector3 Error(const Matrix3& R1, const Matrix3& R2);
 
-Matrix VStack(const Matrix& mat1, const Matrix& mat2 );
-Vector HStack(const Vector& vec1, const Vector& vec2 );
+Math::Matrix VStack(const Math::Matrix& mat1, const Math::Matrix& mat2 );
+Math::Vector HStack(const Math::Vector& vec1, const Math::Vector& vec2 );
+
 }
 
 #endif // UTILS_H

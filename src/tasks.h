@@ -18,7 +18,7 @@ namespace op_space_control
 class OperationalSpaceTask
 {
 public:
-    OperationalSpaceTask();
+    OperationalSpaceTask(std::vector<std::string>& linkNames);
 
     //! Returns task xdes that has been set
     Vector GetDesiredValue()
@@ -41,13 +41,16 @@ public:
     //! User calls this to set PID gains for feedback control in operational space
     void SetGains( double hP=-1, double hD=-0.1, double hI=-0.1 )
     {
-        hP = hP_;
-        hD = hD_;
-        hI = hI_;
+        hP_ = hP;
+        hD_ = hD;
+        hI_ = hI;
     }
 
     //! User calls this to get priority level, a smaller value means more important
-    double GetPriority() { return level_; }
+    double GetPriority()
+    {
+        return level_;
+    }
 
     //! User calls this to set priority level, a smaller value means more important
     void SetPriority( int level=1 )
@@ -57,7 +60,10 @@ public:
 
     //! User calls this to get task weight to differentiate from others on the same
     //! priority level. A larger weight means more important.
-    Vector GetWeight() { return weight_; }
+    Vector GetWeight()
+    {
+        return weight_;
+    }
 
     //! User calls this to set task weight to differentiate from others on the same
     //! priority level. A larger weight means more important.
@@ -67,7 +73,10 @@ public:
     }
 
     //! Task name can be used to retrieve a task in an OperationalSpaceController instance
-    std::string GetName() { return name_; }
+    std::string GetName()
+    {
+        return name_;
+    }
 
     //! Task name can be used to retrieve a task in an OperationalSpaceController instance
     void SetName( std::string name )
@@ -109,9 +118,11 @@ public:
     virtual void DrawGL(const Vector& q) { }
 
 protected:
+
     int level_;
     Vector weight_;
     std::string name_;
+    std::vector<std::string>& linkNames_;
     double hP_;
     double hD_;
     double hI_;
@@ -125,7 +136,7 @@ protected:
 class COMTask : public OperationalSpaceTask
 {
 public:
-    COMTask( RobotDynamics3D& robot, int baseLinkNo = -1 );
+    COMTask( RobotDynamics3D& robot, std::vector<std::string>& linkNames, int baseLinkNo = -1 );
 
     //! Set base link id
     void SetBaseLinkNo(int baseLinkNo) { baseLinkNo_ = baseLinkNo; }
@@ -153,7 +164,7 @@ private:
 class LinkTask : public OperationalSpaceTask
 {
 public:
-    LinkTask( RobotDynamics3D& robot, int linkNo, std::string taskType, int baseLinkNo = -1  );
+    LinkTask( RobotDynamics3D& robot, std::vector<std::string>& linkNames, int linkNo, std::string taskType, int baseLinkNo = -1  );
     void SetBaseLinkNo(int baseLinkNo) { baseLinkNo_ = baseLinkNo; }
     void SetLocalPosition(Vector3 p) { localPosition_ = p; }
     Vector GetSensedValue( const Config& q );
@@ -174,7 +185,7 @@ private:
 class JointTask : public OperationalSpaceTask
 {
 public:
-    JointTask( RobotDynamics3D& robot, const std::vector<int>& jointIndices );
+    JointTask( RobotDynamics3D& robot, std::vector<std::string>& linkNames, const std::vector<int>& jointIndices );
 
     Vector GetSensedValue( const Config& q );
     Matrix GetJacobian( const Config& q );
@@ -191,7 +202,7 @@ private:
 class JointLimitTask : public OperationalSpaceTask
 {
 public:
-    JointLimitTask(  RobotDynamics3D& robot );
+    JointLimitTask(  RobotDynamics3D& robot, std::vector<std::string>& linkNames );
 
     void UpdateState( const Config& q, const Vector& dq, double dt );
 

@@ -43,7 +43,7 @@ void test_robotsim()
     cout << "parse robotsim format" << endl;
 
     op_space_control::RobotsimParser robot;
-    robot.Load("/home/jmainpri/workspace/RobotSim/data/drchubo/DRC/drchubo-v2/drchubo_col.rob");
+    robot.Load("/home/jmainpri/workspace/RobotSim/data/drchubo/DRC/drchubo-v2/drchubo_v2.rob");
 
     cout << "Number of links : " << robot.links.size() << endl;
     cout << "robot.q.n : " << robot.q.n << endl;

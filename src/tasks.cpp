@@ -5,7 +5,7 @@ using namespace op_space_control;
 using std::cout;
 using std::endl;
 
-OperationalSpaceTask::OperationalSpaceTask()
+OperationalSpaceTask::OperationalSpaceTask( std::vector<std::string>& linkNames ) : linkNames_(linkNames)
 {
     // TODO should be virtual
     level_ = 1;
@@ -40,6 +40,19 @@ Vector OperationalSpaceTask::GetCommandVelocity( const Config& q, const Vector& 
     Vector vP = eP * hP_;
     Vector vcmd = vP;
 
+//    cout << "GetSensedError : " << eP << endl;
+
+//    vcmd[0] = 1;
+//    vcmd[1] = 0;
+//    vcmd[2] = 0;
+//    vcmd[3] = 0;
+//    vcmd[4] = 0;
+//    vcmd[5] = 0;
+
+//    cout << "hP_ : " << hP_ << endl;
+//    cout << "hD_ : " << hD_ << endl;
+//    cout << "hI_ : " << hI_ << endl;
+
     // D term
     if( vcur.size() != 0 )
     {
@@ -55,6 +68,7 @@ Vector OperationalSpaceTask::GetCommandVelocity( const Config& q, const Vector& 
         vcmd = vcmd + vI;
     }
     //print "task",name_,"error P=",eP,"D=",eD,"E=",eI_
+
     return vcmd;
 }
 
@@ -118,7 +132,7 @@ Vector OperationalSpaceTask::GetSensedVelocity( const Config& q, const Vector&  
 //--------------------------------------------------------------------
 //--------------------------------------------------------------------
 
-COMTask::COMTask( RobotDynamics3D& robot, int baseLinkNo ) : OperationalSpaceTask(), robot_(robot)
+COMTask::COMTask( RobotDynamics3D& robot, std::vector<std::string>& linkNames, int baseLinkNo ) :robot_(robot), OperationalSpaceTask(linkNames)
 {
     baseLinkNo_ = baseLinkNo;
     mass_ = GetMass();
@@ -157,6 +171,8 @@ Vector COMTask::GetSensedValue( const Config& q )
         Tbinv.setInverse( robot_.links[baseLinkNo_].T_World );
         com = Tbinv * com;
     }
+
+    cout << "com : " << com << endl;
 
     Vector x;
     PushPosToVector( com, x );
@@ -203,6 +219,7 @@ Matrix COMTask::GetJacobian( const Config& q )
         }
     }
 
+    cout << "Jcom : " << Jcom << endl;
     return Jcom;
 }
 
@@ -234,7 +251,7 @@ void COMTask::DrawGL( const Config& q)
 //--------------------------------------------------------------------
 //--------------------------------------------------------------------
 
-LinkTask::LinkTask( RobotDynamics3D& robot, int linkNo, std::string taskType, int baseLinkNo ) : OperationalSpaceTask(), robot_( robot )
+LinkTask::LinkTask( RobotDynamics3D& robot, std::vector<std::string>& linkNames, int linkNo, std::string taskType, int baseLinkNo ) : OperationalSpaceTask(linkNames), robot_( robot )
 {
     linkNo_ = linkNo;
     baseLinkNo_ = baseLinkNo;
@@ -283,11 +300,11 @@ Vector LinkTask::GetSensedValue( const Config& q )
         T = Tbinv * T;
     }
 
-    Vector x;
-    x.clear();
+    Vector x(0);
 
     if( taskType_ == po )
     {
+        cout << "T : " << T * localPosition_ << endl;
         T.t = Vector3( T * localPosition_ );
         PushFrameToVector( T, x );
     }
@@ -317,7 +334,7 @@ Vector LinkTask::TaskDifference( const Vector& a, const Vector& b )
         PopFrameFromVector( atmp, Ta ); // TODO change pile
         PopFrameFromVector( btmp, Tb );
 
-        Vector3 p_e = Ta.t - Ta.t;
+        Vector3 p_e = Ta.t - Tb.t;
         Vector3 o_e = Error( Ta.R, Tb.R );
 
         Vector x_e(6);
@@ -378,6 +395,7 @@ Matrix LinkTask::GetJacobian( const Config& q )
     if( baseLinkNo_ >= 0 )
     {
         Matrix Jb; // Jacobian
+
         Frame3D Tbinv;
         Tbinv.setInverse( robot_.links[baseLinkNo_].T_World );
         Vector3 pb = Tbinv * ( robot_.links[linkNo_].T_World * localPosition_ );
@@ -388,7 +406,7 @@ Matrix LinkTask::GetJacobian( const Config& q )
         }
         else if( taskType_ == position )
         {
-            robot_.GetPositionJacobian  ( pb, baseLinkNo_, Jb );
+            robot_.GetPositionJacobian( pb, baseLinkNo_, Jb );
         }
         else if( taskType_ == orientation )
         {
@@ -401,6 +419,13 @@ Matrix LinkTask::GetJacobian( const Config& q )
             J.getRowRef( i, row );
             row = J.row(i) - Jb.row(i);
         }
+    }
+
+    if( name_ == "Left Foot" ) {
+        cout << "J : " << J << endl;
+    }
+    if( name_ == "Left Hand"){
+        cout << "J : " << J << endl;
     }
 
     return J;
@@ -460,7 +485,7 @@ void LinkTask::DrawGL( const Vector& q )
 //--------------------------------------------------------------------
 //--------------------------------------------------------------------
 
-JointTask::JointTask( RobotDynamics3D& robot, const std::vector<int>& jointIndices ) : OperationalSpaceTask() , robot_(robot)
+JointTask::JointTask( RobotDynamics3D& robot, std::vector<std::string>& linkNames, const std::vector<int>& jointIndices ) : OperationalSpaceTask(linkNames) , robot_(robot)
 {
     jointIndices_ = jointIndices;
     name_ = "Joint";
@@ -497,7 +522,7 @@ Matrix JointTask::GetJacobian( const Config& q )
 //--------------------------------------------------------------------
 //--------------------------------------------------------------------
 
-JointLimitTask::JointLimitTask( RobotDynamics3D& robot ) : OperationalSpaceTask() , robot_(robot)
+JointLimitTask::JointLimitTask( RobotDynamics3D& robot, std::vector<std::string>& linkNames ) : OperationalSpaceTask(linkNames) , robot_(robot)
 {
     buffersize_ = 2.0;
     qMin_ =  robot.qMin;

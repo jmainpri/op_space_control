@@ -5,20 +5,30 @@
 #include <map>
 #include <string>
 
-class RobotDynamics3D;
+#include "controller.h"
 
 namespace op_space_control
 {
-typedef std::vector<double> OpVect;
 class Robot;
-class OperationalSpaceController;
 class DRCHuboOpSpace
 {
+    class DRCHuboController : public OperationalSpaceController
+    {
+    public:
+        DRCHuboController(  RobotDynamics3D* robot, std::vector<std::string>& linkNames, double dt );
+        OpMatrix JointMappingToActive( const OpMatrix& m );
+        OpVect JointMappingToActive( const OpVect& v );
+        OpVect JointMappingToFull( const OpVect& v );
+    private:
+        std::vector<int> active_dofs_;
+        int nb_links_;
+    };
+
 public:
     DRCHuboOpSpace();
     ~DRCHuboOpSpace();
 
-    OpVect MapConfig( const OpVect& q, bool map_out = false);
+    OpVect JointMappingToRobot( const OpVect& q, bool map_out = false);
     void CreateTasks( const OpVect& q_init, double dt );
     std::pair<OpVect,OpVect> Trigger( const OpVect& q_cur_in, const OpVect& dq_cur_in,
                                       const OpVect& q_des_in, const OpVect& dq_des_in, double dt );

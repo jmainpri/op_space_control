@@ -24,8 +24,8 @@ TrajFollowing::~TrajFollowing()
 void TrajFollowing::CreateTasks( Config q_init )
 {
     opController_ = new DRCHuboOpSpace();
-    opController_->SetRobot(&robot_);
-    opController_->SetLinkNames(linkNames_);
+    opController_->SetRobot( &robot_ );
+    opController_->SetLinkNames( linkNames_ );
     opController_->CreateTasks( q_init, dt_ );
 }
 
@@ -47,10 +47,7 @@ void TrajFollowing::LoadTrajectory()
 // and update tasks states """
 std::pair<Vector,Vector> TrajFollowing::Trigger( Config q, Vector dq, double dt, double time_cur )
 {
-    std::pair<OpVect,OpVect> qdes = opController_->Trigger( q_last_, dq_last_, q, dq, dt );
-    std::pair<Vector,Vector> out;
-    out.first =  qdes.first;
-    out.second = qdes.second;
+    std::pair<Vector,Vector> out = opController_->Trigger( q_last_, dq_last_, q, dq, dt );
     return out;
 }
 
@@ -114,10 +111,8 @@ void TrajFollowing::Run()
         q_last_ = q;
         dq_last_ = dq;
 
-        q = q_out.second;
-        cout << q_out.second << endl;
-        // Print status
-        //opController_->PrintStatus( q_out.second );
+        q = q_out.first;
+        //cout << q_out.first << endl;
         time += dt_;
     }
 }

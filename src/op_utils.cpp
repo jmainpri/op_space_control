@@ -62,6 +62,43 @@ Vector op_space_control::GetVector(const Math3D::Vector3& pos)
     return vect;
 }
 
+std::vector< std::vector<double> > op_space_control::GetStdMatrix( const Matrix& mat )
+{
+    std::vector< std::vector<double> > out( mat.numRows() );
+
+    for(int i=0;i<mat.numRows();i++)
+    {
+        out[i].resize( mat.numCols() );
+
+        for(int j=0;j<mat.numCols();j++)
+        {
+            out[i][j] = mat(i,j);
+        }
+    }
+
+    return out;
+}
+
+Matrix op_space_control::GetKrisMatrix( const std::vector< std::vector<double> >& mat )
+{
+    if( mat.empty() ){
+        Matrix out(0,0);
+        return out;
+    }
+
+    Matrix out( mat.size(), mat[0].size() );
+
+    for(int i=0;i<mat.size();i++)
+    {
+        for(int j=0;j<mat[0].size();j++)
+        {
+            out(i,j) = mat[i][j];
+        }
+    }
+
+    return out;
+}
+
 void op_space_control::PushRotationToVector( const Matrix3& R, Vector& x )
 {
     int size = x.size();
@@ -133,7 +170,7 @@ void op_space_control::PopFrameFromVector( Vector& x, Frame3D& T )
 Vector op_space_control::GetPushedFrame( const Frame3D& T )
 {
     Vector vect;
-    op_space_control::PushFrameToVector(T,vect);
+    op_space_control::PushFrameToVector( T, vect );
     return vect;
 }
 
