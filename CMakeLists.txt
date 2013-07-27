@@ -45,14 +45,8 @@ else( urdfdom_FOUND )
    message(STATUS "Could NOT find urdfdom -- We will NOT compile a URDF parser")
 endif( urdfdom_FOUND )
 
-# ---------------------------------
-# ---------------------------------
-# ---------------------------------
-    
-file( GLOB lib_source "src/*.cpp" "src/*.h" )   
-list( SORT lib_source )
-
-#set( robot_sim_libs
+# When compiling with KrisLibary alone
+#set( RobotSim_libs
 #/home/jmainpri/workspace/RobotSim/Library/KrisLibrary/lib/libKrisLibrary.a)
 
 find_package( OpenGL REQUIRED )
@@ -69,12 +63,18 @@ ${RobotSim_dir}/Library/ode-0.11.1/ode/src/.libs/libode.so
 ${RobotSim_dir}/Library/tinyxml/libtinyxml.a
 /home/jmainpri/workspace/devel/lib/libassimp.so )
 
+# ---------------------------------
+# ---------------------------------
+# ---------------------------------
+    
+file( GLOB lib_source "src/*.cpp" "src/*.h" )   
+list( SORT lib_source )
+
 # Define target
 add_library( ${PROJECT_NAME} SHARED ${lib_source} ${RobotSim_libs} )
 
 file( GLOB unit_tests_source "test/*.cpp" )
 list( SORT unit_tests_source )
-
 
 include_directories( src )
 add_executable( test ${unit_tests_source} )
@@ -82,6 +82,7 @@ add_executable( test ${unit_tests_source} )
 #target_link_libraries( test ${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/libraries/KrisLibrary/lib/libKrisLibrary.a )
 target_link_libraries( test ${PROJECT_NAME} ${RobotSim_libs} )
 
+# TODO unit testing
 #enable_testing()
 #message(STATUS "\n-- UNIT TEST: ")
 #add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND})
@@ -97,5 +98,5 @@ target_link_libraries( test ${PROJECT_NAME} ${RobotSim_libs} )
 
 file( GLOB headers "src/controller.h" "src/drchubo_controller.h" )
 
-install(FILES   ${headers} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/OpSpaceController)
+install(FILES   ${headers} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/op_space_control)
 install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)

@@ -1,11 +1,28 @@
-#include "trajfowlloing.h"
+/*
+ * (C) Copyright 2013 WPI-ARC (http://arc.wpi.edu) and others.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the GNU Lesser General Public License
+ * (LGPL) version 2.1 which accompanies this distribution, and is available at
+ * http://www.gnu.org/licenses/lgpl-2.1.html
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * Contributors:
+ *      Jim Mainprice
+ */
+
+#include "traj_fowlloing.h"
 #include "tasks.h"
 #include "controller.h"
 #include "op_utils.h"
 #include "statistics/UniformDistribution.h"
 #include <sys/time.h>
 
-using namespace op_space_control;
+using namespace OpSpaceControl;
 
 using std::cout;
 using std::endl;
@@ -31,7 +48,7 @@ void TrajFollowing::CreateTasks( Config q_init )
 
 void TrajFollowing::LoadTrajectory()
 {
-    if( traj_.parse_robotsim("../test/robot_commands.log") )
+    if( traj_.parse("../test/robot_commands.log") )
     {
         cout << "trajectory loaded" << endl;
         cout << " num config : " << traj_.milestones_.size() << endl;

@@ -1,3 +1,20 @@
+/*
+ * (C) Copyright 2013 WPI-ARC (http://arc.wpi.edu) and others.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the GNU Lesser General Public License
+ * (LGPL) version 2.1 which accompanies this distribution, and is available at
+ * http://www.gnu.org/licenses/lgpl-2.1.html
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * Contributors:
+ *      Jim Mainprice
+ */
+
 #include "op_utils.h"
 
 #include "robotics/RobotDynamics3D.h"
@@ -12,21 +29,21 @@ using std::endl;
 //--------------------------------------------------------------------
 //--------------------------------------------------------------------
 
-std::vector<int> op_space_control::GetStdVector(int value)
+std::vector<int> OpSpaceControl::GetStdVector(int value)
 {
     std::vector<int> vect;
     vect.push_back(value);
     return vect;
 }
 
-std::vector<double> op_space_control::GetStdVector(double value)
+std::vector<double> OpSpaceControl::GetStdVector(double value)
 {
     std::vector<double> vect;
     vect.push_back(value);
     return vect;
 }
 
-std::vector<double> op_space_control::GetStdVector(const Vector3& pos)
+std::vector<double> OpSpaceControl::GetStdVector(const Vector3& pos)
 {
     std::vector<double> vect(3);
     vect[0] = pos[0];
@@ -35,7 +52,7 @@ std::vector<double> op_space_control::GetStdVector(const Vector3& pos)
     return vect;
 }
 
-Vector3 op_space_control::GetVector3(const Vector& vect)
+Vector3 OpSpaceControl::GetVector3(const Vector& vect)
 {
     Vector3 pos;
     pos[0] = vect[0];
@@ -44,7 +61,7 @@ Vector3 op_space_control::GetVector3(const Vector& vect)
     return pos;
 }
 
-float* op_space_control::GetGlVector3(const Math3D::Vector3& pos)
+float* OpSpaceControl::GetGlVector3(const Math3D::Vector3& pos)
 {
     float* vect = new float[3];
     vect[0] = pos[0];
@@ -53,7 +70,7 @@ float* op_space_control::GetGlVector3(const Math3D::Vector3& pos)
     return vect;
 }
 
-Vector op_space_control::GetVector(const Math3D::Vector3& pos)
+Vector OpSpaceControl::GetVector(const Math3D::Vector3& pos)
 {
     Vector vect(3);
     vect[0] = pos[0];
@@ -62,7 +79,7 @@ Vector op_space_control::GetVector(const Math3D::Vector3& pos)
     return vect;
 }
 
-std::vector< std::vector<double> > op_space_control::GetStdMatrix( const Matrix& mat )
+std::vector< std::vector<double> > OpSpaceControl::GetStdMatrix( const Matrix& mat )
 {
     std::vector< std::vector<double> > out( mat.numRows() );
 
@@ -79,7 +96,7 @@ std::vector< std::vector<double> > op_space_control::GetStdMatrix( const Matrix&
     return out;
 }
 
-Matrix op_space_control::GetKrisMatrix( const std::vector< std::vector<double> >& mat )
+Matrix OpSpaceControl::GetKrisMatrix( const std::vector< std::vector<double> >& mat )
 {
     if( mat.empty() ){
         Matrix out(0,0);
@@ -99,7 +116,7 @@ Matrix op_space_control::GetKrisMatrix( const std::vector< std::vector<double> >
     return out;
 }
 
-void op_space_control::PushRotationToVector( const Matrix3& R, Vector& x )
+void OpSpaceControl::PushRotationToVector( const Matrix3& R, Vector& x )
 {
     int size = x.size();
     Vector x_temp = x;
@@ -113,7 +130,7 @@ void op_space_control::PushRotationToVector( const Matrix3& R, Vector& x )
     x[size+6] = R(2,0); x[size+7] = R(2,1); x[size+8] = R(2,2);
 }
 
-void op_space_control::PopRotationFromVector( Vector& x, Matrix3& R )
+void OpSpaceControl::PopRotationFromVector( Vector& x, Matrix3& R )
 {
     int size = x.size();
     R(0,0) = x[size-9]; R(0,1) = x[size-8]; R(0,2) = x[size-7];
@@ -127,7 +144,7 @@ void op_space_control::PopRotationFromVector( Vector& x, Matrix3& R )
         x[i] = x_temp[i];
 }
 
-void op_space_control::PushPosToVector( const Vector3& p, Vector& x )
+void OpSpaceControl::PushPosToVector( const Vector3& p, Vector& x )
 {
     int size = x.size();
     Vector x_temp = x;
@@ -141,7 +158,7 @@ void op_space_control::PushPosToVector( const Vector3& p, Vector& x )
     x[size+2] = p[2];
 }
 
-void op_space_control::PopPosFromVector( Vector& x, Vector3& p )
+void OpSpaceControl::PopPosFromVector( Vector& x, Vector3& p )
 {
     int size = x.size();
     p[0]   = x[size-3];
@@ -155,22 +172,22 @@ void op_space_control::PopPosFromVector( Vector& x, Vector3& p )
         x[i] = x_temp[i];
 }
 
-void op_space_control::PushFrameToVector( const Frame3D& T, Vector& x )
+void OpSpaceControl::PushFrameToVector( const Frame3D& T, Vector& x )
 {
-    op_space_control::PushRotationToVector( T.R, x );
-    op_space_control::PushPosToVector( T.t, x );
+    OpSpaceControl::PushRotationToVector( T.R, x );
+    OpSpaceControl::PushPosToVector( T.t, x );
 }
 
-void op_space_control::PopFrameFromVector( Vector& x, Frame3D& T )
+void OpSpaceControl::PopFrameFromVector( Vector& x, Frame3D& T )
 {
-    op_space_control::PopPosFromVector( x, T.t );
-    op_space_control::PopRotationFromVector( x, T.R );
+    OpSpaceControl::PopPosFromVector( x, T.t );
+    OpSpaceControl::PopRotationFromVector( x, T.R );
 }
 
-Vector op_space_control::GetPushedFrame( const Frame3D& T )
+Vector OpSpaceControl::GetPushedFrame( const Frame3D& T )
 {
     Vector vect;
-    op_space_control::PushFrameToVector( T, vect );
+    OpSpaceControl::PushFrameToVector( T, vect );
     return vect;
 }
 
@@ -287,7 +304,7 @@ Vector3 Moment(const Matrix3& R)
     return Vector3(x,y,z);
 }
 
-Vector3 op_space_control::Error( const Matrix3& R1, const Matrix3& R2 )
+Vector3 OpSpaceControl::Error( const Matrix3& R1, const Matrix3& R2 )
 {
     Matrix3 R2inv;
     R2inv.setInverse( R2 );
@@ -299,7 +316,7 @@ Vector3 op_space_control::Error( const Matrix3& R1, const Matrix3& R2 )
 //--------------------------------------------------------------------
 //--------------------------------------------------------------------
 
-Matrix op_space_control::VStack( const Matrix& mat1, const Matrix& mat2 )
+Matrix OpSpaceControl::VStack( const Matrix& mat1, const Matrix& mat2 )
 {
     if( mat1.numCols() != mat2.numCols()) {
         cout << "Error in Vstack" << endl;
@@ -325,7 +342,7 @@ Matrix op_space_control::VStack( const Matrix& mat1, const Matrix& mat2 )
     return out;
 }
 
-Vector op_space_control::HStack(const Vector& vec1, const Vector& vec2 )
+Vector OpSpaceControl::HStack(const Vector& vec1, const Vector& vec2 )
 {
     Vector out( vec1.size() + vec2.size() );
 

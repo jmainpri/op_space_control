@@ -1,18 +1,39 @@
+/*
+ * (C) Copyright 2013 WPI-ARC (http://arc.wpi.edu) and others.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the GNU Lesser General Public License
+ * (LGPL) version 2.1 which accompanies this distribution, and is available at
+ * http://www.gnu.org/licenses/lgpl-2.1.html
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * Contributors:
+ *      Jim Mainprice
+ */
+
 #ifndef TRAJECTORY_H
 #define TRAJECTORY_H
 
 #include <string>
 #include "math/vector.h"
 
-namespace op_space_control
+namespace OpSpaceControl
 {
+
+//! Simple class that interpolates linearly
+//! between a set of milestones
 class Trajectory
 {
 public:
     Trajectory();
 
-    //! Parse a trajectory in the robot sim format
-    bool parse_robotsim(std::string file);
+    //! Parse a trajectory in the RobotSim format
+    //! i.e. one milestone -> (time, q) per line
+    bool parse(std::string file);
 
     //! Compute the total length of the trajectory
     void compute_length();

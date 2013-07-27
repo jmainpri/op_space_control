@@ -1,7 +1,24 @@
+/*
+ * (C) Copyright 2013 WPI-ARC (http://arc.wpi.edu) and others.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the GNU Lesser General Public License
+ * (LGPL) version 2.1 which accompanies this distribution, and is available at
+ * http://www.gnu.org/licenses/lgpl-2.1.html
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * Contributors:
+ *      Jim Mainprice
+ */
+
 #include "trajectory.h"
 #include <fstream>
 
-using namespace op_space_control;
+using namespace OpSpaceControl;
 
 using std::cout;
 using std::endl;
@@ -11,12 +28,12 @@ Trajectory::Trajectory()
 
 }
 
-bool Trajectory::parse_robotsim( std::string file )
+bool Trajectory::parse( std::string file )
 {
     std::ifstream in( file.c_str() /*,std::ios::in*/ );
 
     if(!in) {
-        printf( "Warning, couldn't open file %s\n", file.c_str() );
+        cout << "Warning, couldn't open file : " << file << endl;
         return false;
     }
 
@@ -29,7 +46,7 @@ bool Trajectory::parse_robotsim( std::string file )
         }
     }
     if(in.bad()) {
-        printf( "Error during read of file %s\n", file.c_str() );
+        cout << "Error during read of file : " << file << endl;
         return false;
     }
     in.close();
