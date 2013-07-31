@@ -28,6 +28,9 @@
 #include <sstream>
 #include <iomanip>
 
+#include <eigen3/Eigen/SVD>
+#include <eigen3/Eigen/QR>
+
 using namespace OpSpaceControl;
 using std::cout;
 using std::endl;
@@ -297,6 +300,8 @@ void OperationalSpaceController::SetZeros( OpVect& q )
         q[i] = 0;
 }
 
+int counter = 1;
+/*
 std::pair<OpVect,OpVect> OperationalSpaceController::Solve( const OpVect& q_tmp, const OpVect& dq_tmp, double dt )
 {
     Vector q( q_tmp );
@@ -311,19 +316,19 @@ std::pair<OpVect,OpVect> OperationalSpaceController::Solve( const OpVect& q_tmp,
     Matrix J1 = GetKrisMatrix( JointMappingToActive( GetStackedJacobian( q, dq, 1 ) ));
     Vector v1 = GetStackedVelocity( q, dq, 1 );
     Matrix J1inv;
-    Math::SVDecomposition<double> svd(J1);
+    Math::SVDecomposition<double> svd( J1 );
     svd.getInverse( J1inv );
 
     cout << "J1 : " << endl << J1 << endl;
     cout << "J1inv : " <<  endl << J1inv << endl;
-    cout << "v1 : " <<  endl << v1 << endl;
+//    cout << "v1 : " <<  endl << v1 << endl;
     Vector dq1; J1inv.mul( v1, dq1 );
 
     // priority 2
     Matrix eye(dq1.size(),dq1.size()); eye.setIdentity();
     Matrix Np(dq1.size(),dq1.size()); Np.mul( J1inv, J1 );
     Matrix N; N.sub( eye, Np );
-    Matrix Jtask = GetKrisMatrix(JointMappingToActive( GetStackedJacobian( q, dq, 2 )));
+    Matrix Jtask = GetKrisMatrix( JointMappingToActive( GetStackedJacobian( q, dq, 2 )));
     Vector dqtask(dq1.size(),0.0);
 
     if ( Jtask.numCols() != 0 && Jtask.numRows() !=0  )
@@ -403,6 +408,8 @@ std::pair<OpVect,OpVect> OperationalSpaceController::Solve( const OpVect& q_tmp,
     out.first = qdes_;
     out.second = dqdes_;
 
+    counter++;
+    cout << "counter : " << counter << endl;
 //    cout << "dqdes_ : RAP : " << out.second[GetLinkIdByName("Body_RAP")] << endl;
 //    cout << "dqdes_ : LAP : " << out.second[GetLinkIdByName("Body_LAP")] << endl;
 
@@ -411,8 +418,61 @@ std::pair<OpVect,OpVect> OperationalSpaceController::Solve( const OpVect& q_tmp,
 
     return out;
 }
+*/
 
-/*
+// Derived from code by Yohann Solaro ( http://listengine.tuxfamily.org/lists.tuxfamily.org/eigen/2010/01/msg00187.html )
+// see : http://en.wikipedia.org/wiki/Moore-Penrose_pseudoinverse#The_general_case_and_the_SVD_method
+Eigen::MatrixXd pinv( const Eigen::MatrixXd &b )
+{
+    // TODO: Figure out why it wants fewer rows than columns
+//    if ( a.rows()<a.cols() )
+//        return false;
+    bool flip = false;
+    Eigen::MatrixXd a;
+    if( a.rows() < a.cols() )
+    {
+        a = b.transpose();
+        flip = true;
+    }
+    else
+        a = b;
+
+    // SVD
+    Eigen::JacobiSVD<Eigen::MatrixXd> svdA;
+    svdA.compute( a, Eigen::ComputeFullU | Eigen::ComputeThinV );
+
+    Eigen::JacobiSVD<Eigen::MatrixXd>::SingularValuesType vSingular = svdA.singularValues();
+
+    // Build a diagonal matrix with the Inverted Singular values
+    // The pseudo inverted singular matrix is easy to compute :
+    // is formed by replacing every nonzero entry by its reciprocal (inversing).
+    Eigen::VectorXd vPseudoInvertedSingular( svdA.matrixV().cols() );
+
+    for (int iRow=0; iRow<vSingular.rows(); iRow++)
+    {
+        if ( fabs(vSingular(iRow)) <= 1e-10 ) // Todo : Put epsilon in parameter
+        {
+            vPseudoInvertedSingular(iRow)=0.;
+        }
+        else
+            vPseudoInvertedSingular(iRow)=1./vSingular(iRow);
+    }
+
+    // A little optimization here
+    Eigen::MatrixXd mAdjointU = svdA.matrixU().adjoint().block( 0, 0, vSingular.rows(), svdA.matrixU().adjoint().cols() );
+
+    // Pseudo-Inversion : V * S * U'
+    Eigen::MatrixXd a_pinv = (svdA.matrixV() * vPseudoInvertedSingular.asDiagonal()) * mAdjointU;
+
+    if( flip )
+    {
+        a = a.transpose();
+        a_pinv = a_pinv.transpose();
+    }
+
+    return a_pinv;
+}
+
 Eigen::MatrixXd GetEigenMatrix(const Matrix& m)
 {
     Eigen::MatrixXd out(m.numRows(),m.numCols());
@@ -447,107 +507,64 @@ Vector GetKrisVector(const Eigen::VectorXd& v)
     return out;
 }
 
-std::pair<Vector,Vector> OperationalSpaceController::Solve( const Config& q_tmp, const Vector& dq_tmp, double dt )
+std::pair<OpVect,OpVect> OperationalSpaceController::Solve( const OpVect& q_tmp, const OpVect& dq_tmp, double dt )
 {
+    Vector q( q_tmp );
+    Vector dq( dq_tmp );
+
     for( int i=0;i< int(taskList_.size()); i++ )
     {
-        taskList_[i]->UpdateState( q_tmp, dq_tmp, dt );
+        taskList_[i]->UpdateState( q, dq, dt );
     }
-
-    Eigen::VectorXd q(q_tmp);
-    Eigen::VectorXd dq(dq_tmp);
 
     // priority 1
-    Eigen::MatrixXd J1 = GetEigenMatrix( GetStackedJacobian( q_tmp, dq_tmp, 1 ) );
+    Eigen::MatrixXd J1 = GetEigenMatrix( GetKrisMatrix( JointMappingToActive( GetStackedJacobian( q_tmp, dq_tmp, 1 ) ) ) );
     Eigen::VectorXd v1 = GetEigenVector( GetStackedVelocity( q_tmp, dq_tmp, 1 ) );
-    Eigen::MatrixXd J1inv = J1.pinverse();
+    Eigen::MatrixXd J1inv = pinv(J1);
+    Eigen::VectorXd dq1 = J1inv * v1;
+    int m = dq1.size();
+    Eigen::VectorXd dqtask( Eigen::VectorXd::Zero(m) );
 
-    Math::SVDecomposition<double> svd(J1);
-    svd.getInverse( J1inv );
-    Vector dq1; J1inv.mul( v1, dq1 );
+    cout << " J1 : " << endl << J1 << endl;
+    cout << " J1inv : " << endl << J1inv << endl;
 
     // priority 2
-    Matrix eye(dq1.size(),dq1.size()); eye.setIdentity();
-    Matrix Np(dq1.size(),dq1.size()); Np.mul( J1inv, J1 );
-    Matrix N; N.sub( eye, Np );
-    Matrix Jtask = GetStackedJacobian( q, dq, 2 );
+    Eigen::MatrixXd Jtask = GetEigenMatrix( GetKrisMatrix( JointMappingToActive( GetStackedJacobian( q, dq, 2 ))));
 
-    Vector dqtask;
-
-    if ( Jtask.numCols() != 0 && Jtask.numRows() !=0  )
+    if ( Jtask.cols() != 0 && Jtask.rows() != 0  )
     {
-        Vector Vtask = GetStackedVelocity( q, dq, 2 );
-        if( HasNaN(Vtask) ) {
-            cout << "Vtask has nan" << endl;
-            cout << "Vtask :" << Vtask << endl;
-            for(int i=0;i<Vtask.size();i++){
-              if(IsNaN(Vtask[i])) Vtask[i] = 0.0;
-            }
-        }
-        Matrix JtaskN; JtaskN.mul( Jtask, N );
-        //assert np.isfinite(Jtask).all(); TODO
-        Vector Jtasktmp; Jtask.mul( dq1, Jtasktmp );
-        Vector Vtask_m_resid; Vtask_m_resid.sub( Vtask , Jtasktmp );
-        Vector z;
-        if( HasNaN(JtaskN) ) {
-            cout << "JtaskN has nan" << endl;
-        }
-        if( HasNaN(Jtasktmp) ) {
-            cout << "Jtasktmp has nan" << endl;
-        }
-        if( HasNaN(Vtask_m_resid) ) {
-            cout << "Vtask_m_resid has nan" << endl;
-        }
-        try
-        {
-            Matrix JtaskNinv;
-            Math::SVDecomposition<double> svd(JtaskN);
-            svd.getInverse( JtaskNinv );
-            JtaskNinv.mul( Vtask_m_resid, z );
-//            cout << "JtaskNinv : " << JtaskNinv << endl;
-//            cout << "Vtask_m_resid : " << Vtask_m_resid << endl;
-//            cout << "z : " << z << endl;
-        }
-        catch(...)
-        {
-            //except np.linalg.LinAlgError:
-            // print "SVD failed, trying lstsq"
-            //z = np.linalg.lstsq(Jtask,Vtask_m_resid,rcond=1e-3)[0];
-        }
-        N.mul( z, dqtask );
-        //cout << "N : " << N << endl;
-        //cout << "z : " << z << endl;
-        //cout << "dqtask : " << dqtask << endl;
+        Eigen::VectorXd Vtask = GetEigenVector( GetStackedVelocity( q, dq, 2 ) );
+        Eigen::MatrixXd N = Eigen::MatrixXd::Identity(m,m) - ( J1inv * J1 );
+        Eigen::MatrixXd JtaskN = Jtask * N;
+        Eigen::VectorXd Vtask_m_resid = Vtask - Jtask * dq1;
+        Eigen::MatrixXd JtaskNinv = pinv( JtaskN );
+        Eigen::VectorXd z = JtaskNinv * Vtask_m_resid;
+        dqtask = N * z;
     }
-    else
-    {
-        dqtask = Vector(dq1.size(),0.0);
-    }
-
-    //cout << "dq1 : " << dq1 << endl;
 
     // compose the velocities together
-    dqdes_ = dq1 + dqtask;
+    dqdes_ = Vector( Vector(JointMappingToFull( GetKrisVector(dq1) )) + Vector(JointMappingToFull( GetKrisVector(dqtask) )) );
+
     CheckMax(1);
 
-    cout << "dq1 : RAR : " << dq1[GetLinkIdByName("Body_RAR")] << endl;
-    cout << "dq1 : LAR : " << dq1[GetLinkIdByName("Body_LAR")] << endl;
+    Config q_tmp_out( q );
+    q_tmp_out.madd( dqdes_, dt_ );
+    qdes_ = q_tmp_out;
 
-    cout << "dqtask : RAR : " << dqtask[GetLinkIdByName("Body_RAR")] << endl;
-    cout << "dqtask : LAR : " << dqtask[GetLinkIdByName("Body_LAR")] << endl;
+    std::pair<OpVect,OpVect> out; // return configuration and velocity
 
-    Config q_tmp(q);
-    q_tmp.madd( dqdes_, dt_ );
-    qdes_ = q_tmp;
-    cout << dt_ << " " << dqdes_.norm() << endl;
-    //cout << "dqdes_ : " << dqdes_ << endl;
+    SetZeros(qdes_);
+    SetZeros(dqdes_);
 
-    std::pair<Vector,Vector> out; // return configuration and velocity
     out.first = qdes_;
     out.second = dqdes_;
+
+    counter++;
+    cout << "counter : " << counter << endl;
+
     return out;
 }
-*/
+
 void OperationalSpaceController::Advance( const OpVect& q, const OpVect& dq, double dt )
 {
     for( int i=0; i<int(taskList_.size()); i++ )

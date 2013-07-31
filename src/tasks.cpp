@@ -322,7 +322,7 @@ Vector LinkTask::GetSensedValue( const Config& q ) const
 
     if( taskType_ == po )
     {
-        cout << "T : " << T * localPosition_ << endl;
+        //cout << "T : " << T * localPosition_ << endl;
         T.t = Vector3( T * localPosition_ );
         PushFrameToVector( T, x );
     }
@@ -438,14 +438,6 @@ Matrix LinkTask::GetJacobian( const Config& q )
             row = J.row(i) - Jb.row(i);
         }
     }
-
-    if( name_ == "Left Foot" ) {
-        cout << "J : " << J << endl;
-    }
-    if( name_ == "Left Hand"){
-        cout << "J : " << J << endl;
-    }
-
     return J;
 }
 
