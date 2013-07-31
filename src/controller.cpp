@@ -283,6 +283,20 @@ void OperationalSpaceController::CheckMax( double limit )
     }
 }
 
+void OperationalSpaceController::SetZeros( OpVect& q )
+{
+    //rs_fingerL = range(13,22);
+    //rs_fingerR = range(33,45);
+    //rs_leg = range(47,60);
+
+    for( int i=33; i<=45;i++)
+        q[i] = 0;
+    for( int i=47; i<=60;i++)
+        q[i] = 0;
+    for( int i=13; i<=22;i++)
+        q[i] = 0;
+}
+
 std::pair<OpVect,OpVect> OperationalSpaceController::Solve( const OpVect& q_tmp, const OpVect& dq_tmp, double dt )
 {
     Vector q( q_tmp );
@@ -377,19 +391,23 @@ std::pair<OpVect,OpVect> OperationalSpaceController::Solve( const OpVect& q_tmp,
     q_tmp_out.madd( dqdes_, dt_ );
     qdes_ = q_tmp_out;
 
-    cout << dt_ << " " << Vector(dqdes_).norm() << endl;
-    cout << "qdes_" << Vector(qdes_) << endl;
-    cout << "dqdes_" << Vector(dqdes_) << endl;
+//    cout << dt_ << " " << Vector(dqdes_).norm() << endl;
+//    cout << "qdes_" << Vector(qdes_) << endl;
+//    cout << "dqdes_" << Vector(dqdes_) << endl;
 
     std::pair<OpVect,OpVect> out; // return configuration and velocity
+
+    SetZeros(qdes_);
+    SetZeros(dqdes_);
+
     out.first = qdes_;
     out.second = dqdes_;
 
-    cout << "dqdes_ : RAP : " << out.second[GetLinkIdByName("Body_RAP")] << endl;
-    cout << "dqdes_ : LAP : " << out.second[GetLinkIdByName("Body_LAP")] << endl;
+//    cout << "dqdes_ : RAP : " << out.second[GetLinkIdByName("Body_RAP")] << endl;
+//    cout << "dqdes_ : LAP : " << out.second[GetLinkIdByName("Body_LAP")] << endl;
 
-    cout << "qdes_ : RAP : " << out.first[GetLinkIdByName("Body_RAP")] << endl;
-    cout << "qdes_ : LAP : " << out.first[GetLinkIdByName("Body_LAP")] << endl;
+//    cout << "qdes_ : RAP : " << out.first[GetLinkIdByName("Body_RAP")] << endl;
+//    cout << "qdes_ : LAP : " << out.first[GetLinkIdByName("Body_LAP")] << endl;
 
     return out;
 }

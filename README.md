@@ -5,7 +5,7 @@ Implementation of an operationnal space controller
 
 In order to parse URDFs, compile the dependencies in the following manner : 
 
-In or-space-control folder
+In op-space-control folder
 
     mkdir libraries/install
     cd libraries

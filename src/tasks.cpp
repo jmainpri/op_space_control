@@ -17,6 +17,7 @@
 
 #include "tasks.h"
 #include "op_utils.h"
+#include <GL/gl.h>
 
 using namespace OpSpaceControl;
 using std::cout;
@@ -169,7 +170,7 @@ double COMTask::GetMass()
     return mass;
 }
 
-Vector COMTask::GetSensedValue( const Config& q )
+Vector COMTask::GetSensedValue( const Config& q ) const
 {
     robot_.UpdateConfig(q);
 
@@ -303,7 +304,7 @@ void LinkTask::SetTaskType(const std::string& taskType)
     }
 }
 
-Vector LinkTask::GetSensedValue( const Config& q )
+Vector LinkTask::GetSensedValue( const Config& q ) const
 {
     robot_.UpdateConfig(q);
 
@@ -453,9 +454,9 @@ void LinkTask::DrawGL( const Vector& q )
     Vector x_buff = GetSensedValue(q);
 
     // TODO link to openGl
-    // glPointSize(6);
-    // glEnable(GL_POINT_SMOOTH);
-    // glBegin(GL_POINTS);
+//    glPointSize(6);
+//    glEnable(GL_POINT_SMOOTH);
+//    glBegin(GL_POINTS);
 
     const Frame3D& Tb = robot_.links[baseLinkNo_].T_World;
 
@@ -463,18 +464,18 @@ void LinkTask::DrawGL( const Vector& q )
     {
         Vector3 x;
         Vector3 xdes;
-        PopPosFromVector(  x_buff, x );
-        PopPosFromVector(  xdes_, xdes );
+        PopPosFromVector( x_buff, x );
+        PopPosFromVector( xdes_, xdes );
         if ( baseLinkNo_ >= 0 )
         {
             x = Tb * x;
             xdes = Tb * xdes;
         }
 
-        // glColor3f(1,0,0);	//red
-        // glVertex3fv(xdes);
-        // glColor3f(1,0.5,0);	//orange
-        // glVertex3fv(x);
+//        glColor3f(1,0,0);	//red
+//        glVertex3fv(xdes);
+//        glColor3f(1,0.5,0);	//orange
+//        glVertex3fv(x);
     }
     else if( taskType_ == po )
     {
@@ -489,11 +490,24 @@ void LinkTask::DrawGL( const Vector& q )
             xdes = Tb * xdes;
         }
 
-        //        glColor3f(1,0,0);	//red
-        //        glVertex3fv(xdes[1]);
-        //        glColor3f(1,0.5,0);	//orange
-        //        glVertex3fv(x[1]);
-        //        glEnd();
+        float gl_xdes[3];
+        float gl_x[3];
+        gl_x[0] = x.t[0];
+        gl_x[1] = x.t[1];
+        gl_x[2] = x.t[2];
+        gl_xdes[0] = xdes.t[0];
+        gl_xdes[1] = xdes.t[1];
+        gl_xdes[2] = xdes.t[2];
+
+        glColor3f(1,0,0);	//red
+        //glVertex3fv(gl_xdes);
+        //g3d_draw_solid_sphere(gl_x[0],gl_x[1],gl_x[2], 0.05, 20 );
+        g3d_draw_frame( x, 0.10 );
+
+        glColor3f(1,0.5,0);	//orange
+        //glVertex3fv(gl_x);
+        //g3d_draw_solid_sphere(gl_xdes[0],gl_xdes[1],gl_xdes[2], 0.05, 20 );
+        g3d_draw_frame( xdes, 0.10 );
     }
 }
 
@@ -509,7 +523,7 @@ JointTask::JointTask( RobotDynamics3D& robot, std::vector<std::string>& linkName
     // pass
 }
 
-Vector JointTask::GetSensedValue( const Config& q )
+Vector JointTask::GetSensedValue( const Config& q ) const
 {
     Vector x( jointIndices_.size() );
 
@@ -553,7 +567,7 @@ JointLimitTask::JointLimitTask( RobotDynamics3D& robot, std::vector<std::string>
     SetGains(-0.1,-2.0,0);
 }
 
-Vector JointLimitTask::GetSensedValue( const Config& q )
+Vector JointLimitTask::GetSensedValue( const Config& q ) const
 {
     Vector x( active_.size() );
 

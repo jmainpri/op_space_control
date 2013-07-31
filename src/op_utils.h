@@ -56,4 +56,7 @@ Math::Vector HStack(const Math::Vector& vec1, const Math::Vector& vec2 );
 
 }
 
+void g3d_draw_solid_sphere(double x_, double y_, double z_, double radius, int nbSegments);
+void g3d_draw_frame( const Frame3D& T, double length);
+
 #endif // UTILS_H

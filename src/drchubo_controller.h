@@ -67,6 +67,9 @@ public:
     void SetRobot( RobotDynamics3D* robot ) { robot_ = robot; }
     void SetLinkNames( const std::vector<std::string>& linknames ) { linkNames_ = linknames; }
 
+    //! draws task space
+    void Draw();
+
 private:
     //! initializes the joint mapping between the robot and the kinematic libray
     void InitMaps();
@@ -78,6 +81,7 @@ private:
     int nb_dofs_;
     bool use_mapping_;
     double dt_;
+    OpVect q_last_;
 };
 }
 

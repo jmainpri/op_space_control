@@ -90,6 +90,12 @@ public:
     //! Mapping to full configuration
     virtual OpVect JointMappingToFull( const OpVect& v ) { return v; }
 
+    //! Zeros part of the configuration
+    void SetZeros( OpVect& q );
+
+    //! Returns pointer to tasks
+    const std::vector<OperationalSpaceTask*>& GetTasks() { return taskList_; }
+
 protected:
 
     int GetLinkIdByName(const std::string& name);

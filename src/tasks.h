@@ -117,7 +117,7 @@ public:
     virtual void Advance( const Config& q, const Vector&  dq, double dt );
 
     //! Gets task x from sensed configuration q
-    virtual Vector GetSensedValue( const Vector& dq ) = 0;
+    virtual Vector GetSensedValue( const Vector& dq ) const = 0;
 
     //! Gets Jacobian dx/dq(q)
     virtual Matrix GetJacobian( const Config& q ) = 0;
@@ -161,7 +161,7 @@ public:
     double GetMass();
 
     //! Returns CoM position
-    Vector GetSensedValue( const Config& q );
+    Vector GetSensedValue( const Config& q ) const;
 
     //! Returns axis-weighted CoM Jacobian by averaging
     Matrix GetJacobian( const Config& q );
@@ -184,7 +184,7 @@ public:
     LinkTask( RobotDynamics3D& robot, std::vector<std::string>& linkNames, int linkNo, std::string taskType, int baseLinkNo = -1  );
     void SetBaseLinkNo(int baseLinkNo) { baseLinkNo_ = baseLinkNo; }
     void SetLocalPosition(Vector3 p) { localPosition_ = p; }
-    Vector GetSensedValue( const Config& q );
+    Vector GetSensedValue( const Config& q ) const;
     Vector TaskDifference( const Vector& a, const Vector& b);
     Matrix GetJacobian( const Config& q );
     void DrawGL( const Vector& q );
@@ -204,7 +204,7 @@ class JointTask : public OperationalSpaceTask
 public:
     JointTask( RobotDynamics3D& robot, std::vector<std::string>& linkNames, const std::vector<int>& jointIndices );
 
-    Vector GetSensedValue( const Config& q );
+    Vector GetSensedValue( const Config& q ) const;
     Matrix GetJacobian( const Config& q );
 
 private:
@@ -223,7 +223,7 @@ public:
 
     void UpdateState( const Config& q, const Vector& dq, double dt );
 
-    Vector GetSensedValue( const Config& q );
+    Vector GetSensedValue( const Config& q ) const;
     Matrix GetJacobian( const Config& q );
 
 private:

@@ -40,6 +40,7 @@ DRCHuboOpSpace::DRCHuboOpSpace()
     nb_dofs_ = 0;
     use_mapping_ = false;
     dt_ = 0.005;
+    opController_ = NULL;
 }
 
 DRCHuboOpSpace::~DRCHuboOpSpace()
@@ -84,6 +85,7 @@ void DRCHuboOpSpace::CreateTasks( const OpVect& q_init, double dt )
 {
     dt_ = dt; // Set Delta Time
 
+    int waist_id = 46; // waist
     int right_foot_id = 59; //      RAR, hubo+ robotsim -> 62,   drc_hubo urdf -> 59,   drc_hubo robotsim -> 59
     int left_foot_id = 52; //       LAR, hubo+ robotsim -> 56,   drc_hubo urdf -> 52,   drc_hubo robotsim -> 52
     int hand_id = 11; //            LWP, hubo+ robotsim -> 13,   drc_hubo urdf -> 11,   drc_hubo robotsim -> 11
@@ -108,32 +110,6 @@ void DRCHuboOpSpace::CreateTasks( const OpVect& q_init, double dt )
     LFTask->SetDesiredValue( GetPushedFrame( (*robot_).links[left_foot_id].T_World ) );
     LFTask->SetDesiredVelocity( Vector(6,0.0) );
     LFTask->SetGains(0,0,0);
-
-    cout << "Create right hand task" << endl;
-    LinkTask* RHTask = new LinkTask( (*robot_), linkNames_, right_hand_id, "po" ); // RWR
-    // maintain position & orientation relative to foot
-    //RHTask->SetBaseLinkNo( left_foot_id ); // RWR
-    // point around middle of palm
-    RHTask->SetLocalPosition( Vector3(0.0,0.0,0.0) ); // TODO see offset
-    RHTask->SetName("Right Hand");
-    RHTask->SetDesiredValue( RHTask->GetSensedValue( q_init ) );
-    RHTask->SetDesiredVelocity( Vector(1) );
-    RHTask->SetGains(1,1,1);
-    RHTask->SetPriority(1);
-    RHTask->SetWeight(Vector(1,1.0));
-
-    cout << "Create right hand task" << endl;
-    LinkTask* LHTask = new LinkTask( (*robot_), linkNames_, left_hand_id, "po" ); // LWR
-    // maintain position & orientation relative to foot
-    //LHTask->SetBaseLinkNo( left_foot_id ); // LWR
-    // point around middle of palm
-    LHTask->SetLocalPosition( Vector3(0.0,0.0,0.0) ); // TODO see offset
-    LHTask->SetName("Left Hand");
-    LHTask->SetDesiredValue( LHTask->GetSensedValue( q_init ) );
-    LHTask->SetDesiredVelocity( Vector(1) );
-    LHTask->SetGains(-100,0,0);
-    LHTask->SetPriority(1);
-    LHTask->SetWeight(Vector(1,1.0));
 
     // priority 2
     // CoM task
@@ -165,25 +141,39 @@ void DRCHuboOpSpace::CreateTasks( const OpVect& q_init, double dt )
     handTask->SetPriority(1);
     handTask->SetWeight(Vector(1,1.0));
 
+    cout << "Create right hand task" << endl;
+    LinkTask* RHTask = new LinkTask( *robot_, linkNames_, right_hand_id, "po", waist_id ); // RWR
+    RHTask->SetLocalPosition( Vector3(0.0,0.0,0.0) ); // TODO see offset
+    RHTask->SetName("Right Hand");
+    RHTask->SetGains(-200, -35, -1);
+    RHTask->SetPriority(1);
+    RHTask->SetWeight(Vector(1,3.0));
+
+    cout << "Create left hand task" << endl;
+    LinkTask* LHTask = new LinkTask( *robot_, linkNames_, left_hand_id, "po", waist_id ); // LWR
+    LHTask->SetLocalPosition( Vector3(0.0,0.0,0.0) ); // TODO see offset
+    LHTask->SetName("Left Hand");
+    LHTask->SetGains(-200, -35, -1);
+    LHTask->SetPriority(1);
+    LHTask->SetWeight(Vector(1,3.0));
+
     // joint task
     cout << "Create joint task" << endl;
     std::vector<JointTask*> jointTasks;
 
     for( int i=0;i<int(q_init.size());i++)
-        jointTasks.push_back(new JointTask((*robot_),linkNames_,GetStdVector(i)));
+        jointTasks.push_back(new JointTask(*robot_,linkNames_,GetStdVector(i)));
 
     for( int i=0;i<int(q_init.size());i++)
     {
         jointTasks[i]->SetName( linkNames_[i] );
-        jointTasks[i]->SetDesiredValue(Vector(1, q_init[i]));
-        jointTasks[i]->SetDesiredVelocity(Vector(1,0.0));
-        jointTasks[i]->SetGains(-1, -0.0, -0.1);
-        jointTasks[i]->SetWeight(Vector(1,0.001));
+        jointTasks[i]->SetGains(-300, -0.0, -0.1);
+        jointTasks[i]->SetWeight(Vector(1,1.0));
         //turn off tasks for the base translation and rotation
         if( i < 6 )
             jointTasks[i]->SetWeight(Vector(1,0.0));
 
-        jointTasks[i]->SetPriority(2);
+        jointTasks[i]->SetPriority(1);
     }
 
     // Setup operational space controller
@@ -192,13 +182,28 @@ void DRCHuboOpSpace::CreateTasks( const OpVect& q_init, double dt )
     opController_ = new DRCHuboController( robot_, linkNames_, dt_ );
 //    opController_->AddTask(RFTask); // Feet
 //    opController_->AddTask(LFTask);
-//    opController_->AddTask(RHTask); // Hands
-    opController_->AddTask(LHTask);
 //    opController_->AddTask(comTask); // Center of mass
 //    opController_->AddTask(handTask); // hand id
-
+//    opController_->AddTask(RHTask); // Hands
+    opController_->AddTask(LHTask);
 //    for( int i=0;i<q_init.size();i++)
 //        opController_->AddTask( jointTasks[i] );
+}
+
+void DRCHuboOpSpace::Draw()
+{
+    if( opController_ == NULL )
+        return;
+
+    const std::vector<OperationalSpaceTask*> tasks = opController_->GetTasks();
+
+    cout << tasks.size() << endl;
+    cout << tasks[0]->GetName() << endl;
+
+    for( int i=0;i<int(tasks.size()); i++)
+    {
+        tasks[i]->DrawGL( q_last_ );
+    }
 }
 
 // Triggers Operational Space Controller to compute (qdes, dqdes),
@@ -206,6 +211,8 @@ void DRCHuboOpSpace::CreateTasks( const OpVect& q_init, double dt )
 std::pair<OpVect,OpVect> DRCHuboOpSpace::Trigger( const OpVect& q_cur, const OpVect& dq_cur,
                                                   const OpVect& q_des, const OpVect& dq_des, double dt )
 {
+    q_last_ = q_cur;
+
     // Set desired config and vel
     opController_->SetDesiredValuesFromConfig( q_des );
     opController_->SetDesiredVelocityFromDifference( q_des, Vector(q_des) + Vector(dq_des), dt );
@@ -216,7 +223,7 @@ std::pair<OpVect,OpVect> DRCHuboOpSpace::Trigger( const OpVect& q_cur, const OpV
     // map output
     if( use_mapping_ )
     {
-        out.first = JointMappingToRobot( out.first, true );
+        out.first  = JointMappingToRobot( out.first, true );
         out.second = JointMappingToRobot( out.second , true );
     }
 
