@@ -366,7 +366,7 @@ Vector LinkTask::TaskDifference( const Vector& a, const Vector& b )
         x_e[3] = p_e[0];
         x_e[4] = p_e[1];
         x_e[5] = p_e[2];
-        cout <<"x_e : " << x_e << endl;
+        //cout <<"x_e : " << x_e << endl;
         return x_e;
     }
     else if( taskType_ == position )
@@ -544,6 +544,8 @@ Matrix JointTask::GetJacobian( const Config& q )
         J.getRowRef( i, row );
         row = Ji;
     }
+//    cout << "J : " << jointIndices_[0] << endl;
+//    cout << J << endl;
     return J;
 }
 

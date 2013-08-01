@@ -25,6 +25,7 @@
 #include "robotics/RobotDynamics3D.h"
 
 #include <sys/time.h>
+#include <GL/gl.h>
 
 using namespace OpSpaceControl;
 
@@ -143,7 +144,7 @@ void DRCHuboOpSpace::CreateTasks( const OpVect& q_init, double dt )
     handTask->SetWeight(Vector(1,1.0));
 
     cout << "Create right hand task" << endl;
-    LinkTask* RHTask = new LinkTask( *robot_, linkNames_, right_hand_id, "po", waist_id ); // RWR
+    LinkTask* RHTask = new LinkTask( *robot_, linkNames_, right_hand_id, "po", left_foot_id ); // RWR
     RHTask->SetLocalPosition( Vector3(0.0,0.0,0.0) ); // TODO see offset
     RHTask->SetDesiredValue( RHTask->GetSensedValue( (q_init) ) );
     RHTask->SetDesiredVelocity( Vector(6,0.0) );
@@ -153,7 +154,7 @@ void DRCHuboOpSpace::CreateTasks( const OpVect& q_init, double dt )
     RHTask->SetWeight(Vector(1,3.0));
 
     cout << "Create left hand task" << endl;
-    LinkTask* LHTask = new LinkTask( *robot_, linkNames_, left_hand_id, "po", waist_id ); // LWR
+    LinkTask* LHTask = new LinkTask( *robot_, linkNames_, left_hand_id, "po", left_foot_id ); // LWR
     LHTask->SetLocalPosition( Vector3(0.0,0.0,0.0) ); // TODO see offset
     LHTask->SetDesiredValue( LHTask->GetSensedValue( (q_init) ) );
     LHTask->SetDesiredVelocity( Vector(6,0.0) );
@@ -191,8 +192,8 @@ void DRCHuboOpSpace::CreateTasks( const OpVect& q_init, double dt )
 //    opController_->AddTask(LFTask);
 //    opController_->AddTask(comTask); // Center of mass
 //    opController_->AddTask(handTask); // hand id
-//    opController_->AddTask(RHTask); // Hands
-//    opController_->AddTask(LHTask);
+    opController_->AddTask(RHTask); // Hands
+    opController_->AddTask(LHTask);
 
     for( int i=0;i<q_init.size();i++)
         opController_->AddTask( jointTasks[i] );
@@ -221,7 +222,9 @@ void DRCHuboOpSpace::Draw()
 std::pair<OpVect,OpVect> DRCHuboOpSpace::Trigger( const OpVect& q_cur, const OpVect& dq_cur,
                                                   const OpVect& q_des, const OpVect& dq_des, double dt )
 {
+    // Store current and desired
     q_last_ = q_cur;
+    q_des_ = q_des;
 
     // Set desired config and vel
     opController_->SetDesiredValuesFromConfig( q_des );

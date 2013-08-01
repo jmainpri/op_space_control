@@ -203,7 +203,7 @@ OpMatrix OperationalSpaceController::GetStackedJacobian( const OpVect& q, const 
             else
             {
                 Vector row;
-                // treat as an el``ementwise weight
+                // treat as an elementwise weight
                 for( int j=0;j< int(Jtemp.numRows()); j++ )
                 {
                     Jtemp.getRowRef( j, row );
@@ -218,6 +218,7 @@ OpMatrix OperationalSpaceController::GetStackedJacobian( const OpVect& q, const 
         }
     }
 
+//    cout << "J stacked : " << J << endl;
     return GetStdMatrix(J);
 }
 
@@ -549,8 +550,8 @@ std::pair<OpVect,OpVect> OperationalSpaceController::Solve( const OpVect& q_tmp,
     Eigen::VectorXd dq1 = J1inv * v1;
 
 //    cout << " J1 : " << endl << J1 << endl;
-    cout << "J1 : " << endl;
-    print_matrix_to_python( J1 );
+//    cout << "J1 : " << endl;
+//    print_matrix_to_python( J1 );
 //    cout << " J1inv : " << endl << J1inv << endl;
 //    cout << " v1 : " << v1.transpose() << endl;
 

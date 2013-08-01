@@ -105,8 +105,9 @@ void TrajFollowing::Run()
 
     while( traj_.length_ > time )
     {
+        double chrono_start = GetRealTime();
 //        cout<< "Time t=" << time << endl;
-//        double chrono_start = GetRealTime();
+
 
 //        q = GetSensedConfig( time );
 
@@ -131,5 +132,6 @@ void TrajFollowing::Run()
         q = q_out.first;
         //cout << q_out.first << endl;
         time += dt_;
+        cout << "time : " << GetRealTime() - chrono_start << endl;
     }
 }

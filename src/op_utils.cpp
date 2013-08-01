@@ -336,15 +336,17 @@ Matrix OpSpaceControl::VStack( const Matrix& mat1, const Matrix& mat2 )
         return Matrix();
     }
 
+    int nb_col = mat1.numCols();
+
     std::vector<Vector> mattmp;
 
     for(int i=0;i<mat1.numRows();i++)
         mattmp.push_back( mat1.row(i) );
 
     for(int i=0;i<mat2.numRows();i++)
-        mattmp.push_back( mat1.row(i) );
+        mattmp.push_back( mat2.row(i) );
 
-    Matrix out( mattmp.size(), mat1.numCols() );
+    Matrix out( mattmp.size(),  nb_col );
     for(int i=0;i<int(mattmp.size());i++)
     {
         Vector row;

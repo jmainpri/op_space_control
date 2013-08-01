@@ -82,6 +82,7 @@ private:
     bool use_mapping_;
     double dt_;
     OpVect q_last_;
+    OpVect q_des_;
 };
 }
 
