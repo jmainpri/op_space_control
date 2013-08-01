@@ -135,7 +135,10 @@ void OpSpaceControl::PopRotationFromVector( Vector& x, Matrix3& R )
 {
     int size = x.size();
     if( size<9 )
+    {
+        cout << "Error in PopRotationFromVector" << endl;
         return;
+    }
 
     R(0,0) = x[size-9]; R(0,1) = x[size-8]; R(0,2) = x[size-7];
     R(1,0) = x[size-6]; R(1,1) = x[size-5]; R(1,2) = x[size-4];
@@ -166,7 +169,10 @@ void OpSpaceControl::PopPosFromVector( Vector& x, Vector3& p )
 {
     int size = x.size();
     if(size < 3)
+    {
+        cout << "Error in PopPosFromVector" << endl;
         return;
+    }
 
     p[0]   = x[size-3];
     p[1]   = x[size-2];

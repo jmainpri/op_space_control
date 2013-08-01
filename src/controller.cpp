@@ -176,15 +176,16 @@ OpMatrix OperationalSpaceController::GetStackedJacobian( const OpVect& q, const 
 
     for( int i=0;i< int(taskList_.size()); i++ )
     {
-        if( taskList_[i]->GetWeight().empty() )
+        const Vector& weight = taskList_[i]->GetWeight();
+
+        if( weight.empty() )
             continue;
-        if( taskList_[i]->GetWeight()[0] == 0.0 )
+        if( weight == 0.0 )
             continue;
 
         if( taskList_[i]->GetPriority() == priority )
         {
             Matrix Jtemp = taskList_[i]->GetJacobian(q);
-            const Vector& weight = taskList_[i]->GetWeight();
 
             // scale by weight
             if( weight.size() > 1 )
@@ -225,29 +226,30 @@ OpVect OperationalSpaceController::GetStackedVelocity( const OpVect& q, const Op
     Vector V(0);
     for( int i=0;i< int(taskList_.size()); i++ )
     {
-        if( taskList_[i]->GetWeight().empty() )
+        const Vector& weight = taskList_[i]->GetWeight();
+
+        if( weight.empty() )
             continue;
-        if( taskList_[i]->GetWeight()[0] == 0.0 )
+        if( weight == 0.0 )
             continue;
 
         if( taskList_[i]->GetPriority() == priority )
         {
             // scale by weight
-            Vector Vtemp = taskList_[i]->GetCommandVelocity( q, dq, dt_);
-            Vector Weight = taskList_[i]->GetWeight();
+            Vector Vtemp =  taskList_[i]->GetCommandVelocity( q, dq, dt_);
 
-            if( Weight.size() == 1  )
+            if( weight.size() == 1  )
             {
                 for( int j=0;j<Vtemp.size();j++)
                 {
-                    Vtemp[j] *= Weight[0];
+                    Vtemp[j] *= weight[0];
                 }
             }
-            else if (Weight.size() == Vtemp.size())
+            else if (weight.size() == Vtemp.size())
             {
-                for( int j=0;j<Weight.size();j++)
+                for( int j=0;j<weight.size();j++)
                 {
-                    Vtemp[j] *= Weight[j]; // TODO why size 0???
+                    Vtemp[j] *= weight[j]; // TODO why size 0???
                 }
             }
             else {
@@ -259,9 +261,11 @@ OpVect OperationalSpaceController::GetStackedVelocity( const OpVect& q, const Op
             }
             if( V.empty() )
             {
+                //cout << "Vtemp 1 " << Vtemp << endl;
                 V = Vtemp;
             }
             else{
+                //cout << "Vtemp 2 " << Vtemp << endl;
                 V = HStack( V, Vtemp );
             }
         }
@@ -420,9 +424,35 @@ std::pair<OpVect,OpVect> OperationalSpaceController::Solve( const OpVect& q_tmp,
 }
 */
 
+void print_matrix_to_python( const Eigen::MatrixXd &mat )
+{
+    for( int i=0;i<mat.rows();i++)
+    {
+        if( i == 0)
+            cout <<"[";
+        for( int j=0;j<mat.cols();j++)
+        {
+            if( j == 0)
+                cout <<"[";
+
+            cout <<  mat(i,j) ;
+
+            if( j == mat.cols()-1 )
+                cout <<"]";
+            else
+                cout <<",";
+        }
+        if( i == mat.rows()-1 )
+            cout <<"]";
+        else
+            cout << ",";
+    }
+    cout << endl;
+}
+
 // Derived from code by Yohann Solaro ( http://listengine.tuxfamily.org/lists.tuxfamily.org/eigen/2010/01/msg00187.html )
 // see : http://en.wikipedia.org/wiki/Moore-Penrose_pseudoinverse#The_general_case_and_the_SVD_method
-Eigen::MatrixXd pinv( const Eigen::MatrixXd &b )
+Eigen::MatrixXd pinv( const Eigen::MatrixXd &b, double rcond )
 {
     // TODO: Figure out why it wants fewer rows than columns
 //    if ( a.rows()<a.cols() )
@@ -450,7 +480,7 @@ Eigen::MatrixXd pinv( const Eigen::MatrixXd &b )
 
     for (int iRow=0; iRow<vSingular.rows(); iRow++)
     {
-        if ( fabs(vSingular(iRow)) <= 1e-10 ) // Todo : Put epsilon in parameter
+        if ( fabs(vSingular(iRow)) <= rcond ) // Todo : Put epsilon in parameter
         {
             vPseudoInvertedSingular(iRow)=0.;
         }
@@ -478,90 +508,91 @@ Eigen::MatrixXd GetEigenMatrix(const Matrix& m)
     Eigen::MatrixXd out(m.numRows(),m.numCols());
 
     for(int i=0;i<m.numRows();i++)
-    {
         for(int j=0;j<m.numCols();j++)
-        {
             out(i,j) = m(i,j);
-        }
-    }
+
     return out;
 }
 
 Eigen::VectorXd GetEigenVector(const Vector& v)
 {
     Eigen::VectorXd out(v.size());
-    for(int i=0;i<v.size();i++)
-    {
+
+    for(int i=0;i<out.size();i++)
         out[i] = v[i];
-    }
+
     return out;
 }
 
 Vector GetKrisVector(const Eigen::VectorXd& v)
 {
     Vector out(v.size());
-    for(int i=0;i<v.size();i++)
-    {
+
+    for(int i=0;i<out.size();i++)
         out[i] = v[i];
-    }
+
     return out;
 }
 
 std::pair<OpVect,OpVect> OperationalSpaceController::Solve( const OpVect& q_tmp, const OpVect& dq_tmp, double dt )
 {
-    Vector q( q_tmp );
-    Vector dq( dq_tmp );
-
     for( int i=0;i< int(taskList_.size()); i++ )
     {
-        taskList_[i]->UpdateState( q, dq, dt );
+        taskList_[i]->UpdateState( q_tmp, dq_tmp, dt );
     }
 
     // priority 1
-    Eigen::MatrixXd J1 = GetEigenMatrix( GetKrisMatrix( JointMappingToActive( GetStackedJacobian( q_tmp, dq_tmp, 1 ) ) ) );
+    Eigen::MatrixXd J1 = GetEigenMatrix( GetKrisMatrix( GetStackedJacobian( q_tmp, dq_tmp, 1 )));
     Eigen::VectorXd v1 = GetEigenVector( GetStackedVelocity( q_tmp, dq_tmp, 1 ) );
-    Eigen::MatrixXd J1inv = pinv(J1);
+    Eigen::MatrixXd J1inv = pinv( J1, 1e-2 );
+    //cout << "v1.size() : " << v1.size() << endl;
     Eigen::VectorXd dq1 = J1inv * v1;
-    int m = dq1.size();
-    Eigen::VectorXd dqtask( Eigen::VectorXd::Zero(m) );
 
-    cout << " J1 : " << endl << J1 << endl;
-    cout << " J1inv : " << endl << J1inv << endl;
+//    cout << " J1 : " << endl << J1 << endl;
+    cout << "J1 : " << endl;
+    print_matrix_to_python( J1 );
+//    cout << " J1inv : " << endl << J1inv << endl;
+//    cout << " v1 : " << v1.transpose() << endl;
 
     // priority 2
-    Eigen::MatrixXd Jtask = GetEigenMatrix( GetKrisMatrix( JointMappingToActive( GetStackedJacobian( q, dq, 2 ))));
+    Eigen::MatrixXd Jtask = GetEigenMatrix( GetKrisMatrix( GetStackedJacobian( q_tmp, dq_tmp, 2 )));
 
     if ( Jtask.cols() != 0 && Jtask.rows() != 0  )
     {
-        Eigen::VectorXd Vtask = GetEigenVector( GetStackedVelocity( q, dq, 2 ) );
+        int m = dq1.size();
+        Eigen::VectorXd dqtask( Eigen::VectorXd::Zero(m) );
+        Eigen::VectorXd Vtask = GetEigenVector( GetStackedVelocity( q_tmp, dq_tmp, 2 ) );
         Eigen::MatrixXd N = Eigen::MatrixXd::Identity(m,m) - ( J1inv * J1 );
         Eigen::MatrixXd JtaskN = Jtask * N;
         Eigen::VectorXd Vtask_m_resid = Vtask - Jtask * dq1;
-        Eigen::MatrixXd JtaskNinv = pinv( JtaskN );
+        Eigen::MatrixXd JtaskNinv = pinv( JtaskN, 1e-2 );
         Eigen::VectorXd z = JtaskNinv * Vtask_m_resid;
         dqtask = N * z;
-    }
 
-    // compose the velocities together
-    dqdes_ = Vector( Vector(JointMappingToFull( GetKrisVector(dq1) )) + Vector(JointMappingToFull( GetKrisVector(dqtask) )) );
+        // compose the velocities together
+        dqdes_ = GetKrisVector( dq1 + dqtask );
+    }
+    else {
+        dqdes_ =  GetKrisVector( dq1 );
+    }
 
     CheckMax(1);
 
-    Config q_tmp_out( q );
+    Config q_tmp_out( q_tmp );
     q_tmp_out.madd( dqdes_, dt_ );
     qdes_ = q_tmp_out;
 
     std::pair<OpVect,OpVect> out; // return configuration and velocity
 
-    SetZeros(qdes_);
-    SetZeros(dqdes_);
+    SetZeros( qdes_ );
+    SetZeros( dqdes_ );
 
     out.first = qdes_;
     out.second = dqdes_;
 
     counter++;
-    cout << "counter : " << counter << endl;
-
+//    cout << "counter : " << counter << endl;
+//    cout << "dt : " << dt << endl;
     return out;
 }
 

@@ -42,6 +42,8 @@ OperationalSpaceTask::OperationalSpaceTask( std::vector<std::string>& linkNames 
 // vcmd = hP*eP + hD*eV + hI*eI
 Vector OperationalSpaceTask::GetCommandVelocity( const Config& q, const Vector&  dq, double dt )
 {
+//    cout << "Get command velocity" << endl;
+
     Vector eP = GetSensedError( q );
     if( HasNaN(eP) )
     {
@@ -132,6 +134,8 @@ Vector OperationalSpaceTask::GetSensedVelocity( const Config& q, const Vector&  
 
     // uncomment this to get a jacobian based technique
     // return np.dot(_getJacobian(q),dq)
+
+    //cout << "Get sensed velocity" << endl;
 
     if( qLast_.empty() )
     {
@@ -356,12 +360,13 @@ Vector LinkTask::TaskDifference( const Vector& a, const Vector& b )
         Vector3 o_e = Error( Ta.R, Tb.R );
 
         Vector x_e(6);
-        x_e[0] = p_e[0];
-        x_e[1] = p_e[1];
-        x_e[2] = p_e[2];
-        x_e[3] = o_e[0];
-        x_e[4] = o_e[1];
-        x_e[5] = o_e[2];
+        x_e[0] = o_e[0];
+        x_e[1] = o_e[1];
+        x_e[2] = o_e[2];
+        x_e[3] = p_e[0];
+        x_e[4] = p_e[1];
+        x_e[5] = p_e[2];
+        cout <<"x_e : " << x_e << endl;
         return x_e;
     }
     else if( taskType_ == position )
@@ -388,6 +393,7 @@ Vector LinkTask::TaskDifference( const Vector& a, const Vector& b )
 
 Matrix LinkTask::GetJacobian( const Config& q )
 {
+    //cout << q << endl;
     robot_.UpdateConfig(q);
 
     Matrix J; // Jacobian of the Link
@@ -438,6 +444,7 @@ Matrix LinkTask::GetJacobian( const Config& q )
             row = J.row(i) - Jb.row(i);
         }
     }
+    //cout << "Link J : " << J << endl;
     return J;
 }
 
