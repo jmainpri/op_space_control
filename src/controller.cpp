@@ -535,6 +535,17 @@ Vector GetKrisVector(const Eigen::VectorXd& v)
     return out;
 }
 
+Eigen::VectorXd GetEigenVector(const OpVect& v)
+{
+    Eigen::VectorXd out(v.size());
+
+    for(int i=0;i<out.size();i++)
+        out[i] = v[i];
+
+    return out;
+}
+
+/*
 std::pair<OpVect,OpVect> OperationalSpaceController::Solve( const OpVect& q_tmp, const OpVect& dq_tmp, double dt )
 {
     for( int i=0;i< int(taskList_.size()); i++ )
@@ -543,17 +554,10 @@ std::pair<OpVect,OpVect> OperationalSpaceController::Solve( const OpVect& q_tmp,
     }
 
     // priority 1
-    Eigen::MatrixXd J1 = GetEigenMatrix( GetKrisMatrix( GetStackedJacobian( q_tmp, dq_tmp, 1 )));
-    Eigen::VectorXd v1 = GetEigenVector( GetStackedVelocity( q_tmp, dq_tmp, 1 ) );
+    Eigen::MatrixXd J1 = GetEigenMatrix( GetKrisMatrix( GetStackedJacobian( q_cur, dq_cur, 1 )));
+    Eigen::VectorXd v1 = GetEigenVector( GetStackedVelocity( q_cur, dq_cur, 1 ) );
     Eigen::MatrixXd J1inv = pinv( J1, 1e-2 );
-    //cout << "v1.size() : " << v1.size() << endl;
     Eigen::VectorXd dq1 = J1inv * v1;
-
-//    cout << " J1 : " << endl << J1 << endl;
-//    cout << "J1 : " << endl;
-//    print_matrix_to_python( J1 );
-//    cout << " J1inv : " << endl << J1inv << endl;
-//    cout << " v1 : " << v1.transpose() << endl;
 
     // priority 2
     Eigen::MatrixXd Jtask = GetEigenMatrix( GetKrisMatrix( GetStackedJacobian( q_tmp, dq_tmp, 2 )));
@@ -580,6 +584,58 @@ std::pair<OpVect,OpVect> OperationalSpaceController::Solve( const OpVect& q_tmp,
     CheckMax(1);
 
     Config q_tmp_out( q_tmp );
+    q_tmp_out.madd( dqdes_, dt_ );
+    qdes_ = q_tmp_out;
+
+    std::pair<OpVect,OpVect> out; // return configuration and velocity
+
+    SetZeros( qdes_ );
+    SetZeros( dqdes_ );
+
+    out.first = qdes_;
+    out.second = dqdes_;
+
+    counter++;
+//    cout << "counter : " << counter << endl;
+//    cout << "dt : " << dt << endl;
+    return out;
+}
+*/
+
+
+std::pair<OpVect,OpVect> OperationalSpaceController::Solve( const OpVect& q_cur, const OpVect& dq_cur, double dt )
+{
+    for( int i=0;i< int(taskList_.size()); i++ )
+    {
+        taskList_[i]->UpdateState( q_cur, dq_cur, dt );
+    }
+
+    Eigen::VectorXd q_tmp = GetEigenVector(q_cur);
+    Eigen::VectorXd dq_tmp = GetEigenVector(dq_cur);
+
+    int n_loops=5;
+    dt_ = dt / double(n_loops);
+    for( int i=0;i<n_loops; i++ )
+    {
+        // priority 1
+        Eigen::MatrixXd J1 = GetEigenMatrix( GetKrisMatrix( GetStackedJacobian( GetKrisVector(q_tmp), GetKrisVector(dq_tmp), 1 )));
+        Eigen::VectorXd v1 = GetEigenVector( GetStackedVelocity( GetKrisVector(q_tmp), GetKrisVector(dq_tmp), 1 ) );
+
+        Eigen::MatrixXd J1inv = pinv( J1, 1e-3 );
+        Eigen::VectorXd dq1 = J1inv * v1;
+
+        Eigen::VectorXd q_tmp1 =  q_tmp + dq1*dt_;
+        dq_tmp = q_tmp1 - q_tmp;
+        q_tmp = q_tmp1;
+    }
+
+    dt_ = dt;
+
+    dqdes_ = GetKrisVector( q_tmp - GetEigenVector( q_cur ) );
+
+    CheckMax(1);
+
+    Config q_tmp_out( GetKrisVector(q_tmp) );
     q_tmp_out.madd( dqdes_, dt_ );
     qdes_ = q_tmp_out;
 

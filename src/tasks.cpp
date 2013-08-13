@@ -60,19 +60,6 @@ Vector OperationalSpaceTask::GetCommandVelocity( const Config& q, const Vector& 
     Vector vP = eP * hP_;
     Vector vcmd = vP;
 
-//    cout << "GetSensedError : " << eP << endl;
-
-//    vcmd[0] = 1;
-//    vcmd[1] = 0;
-//    vcmd[2] = 0;
-//    vcmd[3] = 0;
-//    vcmd[4] = 0;
-//    vcmd[5] = 0;
-
-//    cout << "hP_ : " << hP_ << endl;
-//    cout << "hD_ : " << hD_ << endl;
-//    cout << "hI_ : " << hI_ << endl;
-
     // D term
     if( vcur.size() != 0 )
     {

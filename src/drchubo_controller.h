@@ -70,6 +70,9 @@ public:
     //! draws task space
     void Draw();
 
+    //! returns machine real time
+    double GetRealTime();
+
 private:
     //! initializes the joint mapping between the robot and the kinematic libray
     void InitMaps();
